@@ -15,7 +15,7 @@ class RegistrationOriginMiddleware(object):
     def process_request(self, request):
         match = self.INCOMING_REGEX.match(request.path)
         if match:
-            response = HttpResponseRedirect('')
+            response = HttpResponseRedirect('/')
             # set cookie with insight code
             max_age = 365 * 24 * 60 * 60  # one year
             expires = datetime.strftime(
@@ -27,7 +27,7 @@ class RegistrationOriginMiddleware(object):
                 'value': match.group('code'),
                 'max_age': max_age,
                 'expires': expires,
-                'domain': request.META['Host'],
+                'domain': request.META['HTTP_HOST'],
                 'path': self.TRACK_URL,
                 'secure': request.is_secure() or None, 
             } 
@@ -52,6 +52,6 @@ class RegistrationOriginMiddleware(object):
                 response.delete_cookie(
                     'insight_code', 
                     self.TRACK_URL, 
-                    request.META['Host']
+                    request.META['HTTP_HOST']
                 )
         return response
