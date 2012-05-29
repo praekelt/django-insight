@@ -8,7 +8,7 @@ setup(
     author='Praekelt Foundation',
     author_email='dev@praekelt.com',
     license='BSD',
-    url='http://github.com/praekelt/jmbo-foundry',
+    url='http://github.com/praekelt/django-insight',
     packages = find_packages(),
     install_requires = [
     ],
