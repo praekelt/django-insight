@@ -10,7 +10,7 @@ from insight.models import Registration, Origin
 class RegistrationOriginMiddleware(object):
     TRACK_URL = '/join/'  # foundry join form url
     TRACK_REGEX = re.compile('^' + re.escape(TRACK_URL) + '$')
-    INCOMING_REGEX = r'^/(?P<prefix>[a-z])/(?P<code>[\w]+)/$'
+    INCOMING_REGEX = re.compile(r'^/(?P<prefix>[a-z])/(?P<code>[\w]+)/$')
     
     def process_request(self, request):
         match = self.INCOMING_REGEX.match(request.path)
