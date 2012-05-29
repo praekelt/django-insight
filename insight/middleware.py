@@ -16,22 +16,23 @@ class RegistrationOriginMiddleware(object):
         match = self.INCOMING_REGEX.match(request.path)
         if match:
             response = HttpResponseRedirect('/')
-            # set cookie with insight code
-            max_age = 365 * 24 * 60 * 60  # one year
-            expires = datetime.strftime(
-                datetime.utcnow() + timedelta(seconds=max_age),
-                "%a, %d-%b-%Y %H:%M:%S GMT"
-            )
-            cookie_args = {
-                'key': 'insight_code',
-                'value': match.group('code'),
-                'max_age': max_age,
-                'expires': expires,
-                'domain': request.META['HTTP_HOST'],
-                'path': self.TRACK_URL,
-                'secure': request.is_secure() or None, 
-            } 
-            response.set_cookie(**cookie_args) 
+            if request.user.is_anonymous():
+                # set cookie with insight code
+                max_age = 365 * 24 * 60 * 60  # one year
+                expires = datetime.strftime(
+                    datetime.utcnow() + timedelta(seconds=max_age),
+                    "%a, %d-%b-%Y %H:%M:%S GMT"
+                )
+                cookie_args = {
+                    'key': 'insight_code',
+                    'value': match.group('code'),
+                    'max_age': max_age,
+                    'expires': expires,
+                    #'domain': request.META['HTTP_HOST'],
+                    'path': self.TRACK_URL,
+                    'secure': request.is_secure() or None, 
+                } 
+                response.set_cookie(**cookie_args)
             return response
         else:
             return None

@@ -15,7 +15,8 @@ class Origin(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(Origin, self).__init__(*args, **kwargs)
-        self.code = self.generate_code()
+        if not self.code:
+            self.code = self.generate_code()
 
     def generate_code(self):
         while True:
