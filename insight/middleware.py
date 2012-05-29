@@ -3,13 +3,16 @@ from datetime import datetime, timedelta
 
 from django.http import HttpResponseRedirect
 
+from insight.models import Registration, Origin
 
-class RegistrationOriginMiddleware(object)
+
+'''Requires Django's AuthenticationMiddleware'''
+class RegistrationOriginMiddleware(object):
     TRACK_URL = '/join/'  # foundry join form url
     TRACK_REGEX = re.compile('^' + re.escape(TRACK_URL) + '$')
     INCOMING_REGEX = r'^/(?P<prefix>[a-z])/(?P<code>[\w]+)/$'
     
-    process_request(self, request):
+    def process_request(self, request):
         match = self.INCOMING_REGEX.match(request.path)
         if match:
             response = HttpResponseRedirect('')
@@ -23,6 +26,7 @@ class RegistrationOriginMiddleware(object)
                 'key': 'insight_code',
                 'value': match.group('code'),
                 'max_age': max_age,
+                'expires': expires,
                 'domain': request.META['Host'],
                 'path': self.TRACK_URL,
                 'secure': request.is_secure() or None, 
@@ -33,9 +37,21 @@ class RegistrationOriginMiddleware(object)
             return None
 
 
-    process_response(self, request, response):
+    def process_response(self, request, response):
         if request.method == 'POST' and self.TRACK_REGEX.match(request.path):
-            # record code and additional data
-            
-            # remove cookie
-            response.delete_cookie('insight_code')
+            if request.user.is_authenticated():
+                # record new registration with its origin identified by code
+                print('newly registered user jay!')
+                new_registration = Registration(
+                    user_id = request.user.id,
+                    origin = Origin.objects.get(
+                        code=request.COOKIES['insight_code'])
+                )
+                new_registration.save()
+                # remove cookie
+                response.delete_cookie(
+                    'insight_code', 
+                    self.TRACK_URL, 
+                    request.META['Host']
+                )
+        return response
