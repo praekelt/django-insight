@@ -44,7 +44,7 @@ class RegistrationOriginMiddleware(object):
                 # record new registration with its origin identified by code
                 print('newly registered user jay!')
                 new_registration = Registration(
-                    user_id = request.user.id,
+                    user = request.user,
                     origin = Origin.objects.get(
                         code=request.COOKIES['insight_code'])
                 )

@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import F
 
@@ -25,20 +26,26 @@ class Origin(models.Model):
             if not Origin.objects.filter(code=cde).exists():
                 return cde
 
+    def __unicode__(self):
+        return self.title
+
     @property
     def url(self):
         return '/i/%s/' % self.code
 
 
 class Registration(models.Model):
-    user_id = models.IntegerField()
-    origin = models.ForeignKey(Origin)
+    user = models.ForeignKey(User, editable=False)
+    origin = models.ForeignKey(Origin, editable=False)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['created']
+        ordering = ['-created']
 
     def save(self):
         super(Registration, self).save()
         self.origin.number_of_registrations = F('number_of_registrations') + 1
         self.origin.save()
+    
+    def __unicode__(self):
+        return str(self.id)
