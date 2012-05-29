@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 from django.http import HttpResponseRedirect
 
 
-class RecordOriginMiddleware(object)
+class RegistrationOriginMiddleware(object)
     TRACK_URL = '/join/'  # foundry join form url
-    TRACK_REGEX = re.compile('^' + TRACK_URL + '$')
+    TRACK_REGEX = re.compile('^' + re.escape(TRACK_URL) + '$')
     INCOMING_REGEX = r'^/(?P<prefix>[a-z])/(?P<code>[\w]+)/$'
     
     process_request(self, request):
@@ -30,9 +30,12 @@ class RecordOriginMiddleware(object)
             response.set_cookie(**cookie_args) 
             return response
         else:
-            if request.method == 'POST' and self.TRACK_REGEX.match(request.path):
-                # record code and additional data
-                
-                # remove cookie
-                request.delete_cookie('insight_code')
             return None
+
+
+    process_response(self, request, response):
+        if request.method == 'POST' and self.TRACK_REGEX.match(request.path):
+            # record code and additional data
+            
+            # remove cookie
+            response.delete_cookie('insight_code')
