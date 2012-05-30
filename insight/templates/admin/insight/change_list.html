@@ -15,5 +15,13 @@
 {% block content %}
     {{ block.super }}
     <div id="graphs">
+         <script type="text/javascript">
+            window.addEventListener("load", function(){
+                IGraphs.init();
+                var piechart = new IGraphs.PieChart("Origins", 400, 400, 150);
+                piechart.updateData("result_list", 1, 4);
+                piechart.draw();
+            }, false);
+        </script>
     </div>
 {% endblock %}
