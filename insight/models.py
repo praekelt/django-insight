@@ -42,8 +42,8 @@ class Registration(models.Model):
     class Meta:
         ordering = ['-created']
 
-    def save(self):
-        super(Registration, self).save()
+    def save(self, *args, **kwargs):
+        super(Registration, self).save(*args, **kwargs)
         self.origin.number_of_registrations = F('number_of_registrations') + 1
         self.origin.save()
     
