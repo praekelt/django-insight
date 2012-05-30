@@ -1,0 +1,14 @@
+#content-main {
+    width: 50%;
+}
+
+#content-main, #graphs{
+    display: inline-block;
+}
+
+#graphs {
+    float: left;
+    padding: 15px;
+    margin-left: 15px;
+    border: 1px solid #CCCCCC;
+}
