@@ -42,7 +42,6 @@ class RegistrationOriginMiddleware(object):
         if request.method == 'POST' and self.TRACK_REGEX.match(request.path):
             if request.user.is_authenticated():
                 # record new registration with its origin identified by code
-                print('newly registered user jay!')
                 new_registration = Registration(
                     user = request.user,
                     origin = Origin.objects.get(
