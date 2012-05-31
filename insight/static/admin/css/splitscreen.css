@@ -12,3 +12,18 @@
     margin-left: 15px;
     border: 1px solid #CCCCCC;
 }
+
+.graph .title {
+    font-size: medium;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.graph .label {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.graph .percentage {
+    font-size: 11px;
+}
