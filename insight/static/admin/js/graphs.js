@@ -13,7 +13,8 @@ IGraphs.Graph = function(title, width, height) {
     this.width = width;
     this.height = height;
     if (IGraphs.container) {
-        this.chart = IGraphs.container.append("svg:svg")
+        this.chart = IGraphs.container.append("div")
+            .append("svg:svg")
             .attr("class", "graph")
             .attr("width", width)
             .attr("height", height);
@@ -33,6 +34,13 @@ IGraphs.Graph.prototype = {
     updateData: function() {
         // override in children
     },
+    selectKeyValue: function(table_id, key_column_index, value_column_index) {
+        this.data = this.selectTableData(
+            table_id, 
+            [key_column_index, value_column_index], 
+            ['key', 'value']
+        );
+    },
     selectTableData: function(table_id, column_indices, column_names) {
         var data = [];
         var rows = d3.selectAll("#" + table_id + " tbody tr");
@@ -50,17 +58,17 @@ IGraphs.Graph.prototype = {
 /*
  * PieChart object
  */
-IGraphs.PieChart = function(title, width, height, radius) {
+IGraphs.PieChart = function(title, width, height) {
     IGraphs.Graph.call(this, title, width, height);
     this.slices = this.chart.append("svg:g")
         .attr("class", "slices")
         .attr("transform", "translate(" + (width/2) + "," + (height/2) + ")");
+    this.radius = width / 2 * 0.6;
     this.arc = d3.svg.arc()
         .startAngle(function(d){ return d.startAngle; })
         .endAngle(function(d){ return d.endAngle; })
-        .innerRadius(radius/2)
-        .outerRadius(radius);
-    this.radius = radius;
+        .innerRadius(this.radius/2)
+        .outerRadius(this.radius);
 };
 
 IGraphs.PieChart.prototype = new IGraphs.Graph();
@@ -68,13 +76,7 @@ IGraphs.PieChart.prototype.constructor = IGraphs.PieChart;
 IGraphs.PieChart.prototype.supr = IGraphs.Graph.prototype;
 
 IGraphs.PieChart.prototype.updateData = function(table_id, key_column_index, value_column_index) {
-    this.data = this.supr.selectTableData.call(
-        this,
-        table_id, 
-        [key_column_index, value_column_index], 
-        ['key', 'value']
-    );
-    return this.data;
+    this.selectKeyValue(table_id, key_column_index, value_column_index);
 };
 
 IGraphs.PieChart.prototype.draw = function(element) {
@@ -126,4 +128,52 @@ IGraphs.PieChart.prototype.draw = function(element) {
             .text(function(d, i) { return (data[i].value * 100.0 / total + "%"); });
         slices.exit().remove();
     }
+};
+
+/*
+ * BarChart object
+ */
+IGraphs.BarChart = function(title, width, height) {
+    IGraphs.Graph.call(this, title, width, height);
+    this.bars = this.chart.append("svg:g")
+        .attr("class", "bars")
+};
+
+IGraphs.BarChart.prototype = new IGraphs.Graph();
+IGraphs.BarChart.prototype.constructor = IGraphs.BarChart;
+IGraphs.BarChart.prototype.supr = IGraphs.Graph.prototype;
+
+IGraphs.BarChart.prototype.updateData = function(table_id, key_column_index, value_column_index) {
+    this.selectKeyValue(table_id, key_column_index, value_column_index);
+    this.column_width = 0.6 * this.width / this.data.length;
+};
+
+IGraphs.BarChart.prototype.draw = function(element) {
+    var max = 0;
+    var column_width = this.column_width;
+    var getColour = d3.scale.category20(); 
+    function getValues(in_data, out_vals, out_labels) {
+        for (var i = 0; i < in_data.length; i++){
+            out_vals.push(in_data[i].value);
+            out_labels.push(in_data[i].key);
+            if (in_data[i].value > max)
+                max = in_data[i].value;
+        }
+    };
+    var data = [];
+    var labels = [];
+    var height = this.height;
+    getValues = getValues(this.data, data, labels);
+    var y = d3.scale.linear()
+        .domain([0, max])
+        .range([0, 2 / 3.0 * this.height])
+    var bars = this.bars.selectAll("rect").data(data);
+    bars.enter().append("svg:g")
+        .attr("class", "bar");
+    bars.append("rect")
+        .attr("x", function(d, i) { return i * column_width + i; })
+        .attr("y", function(d, i) { return height - 40 - y(d, i); })
+        .attr("height", y)
+        .attr("width", column_width)
+        .attr("fill", function(d, i) { return getColour(i); });
 };
