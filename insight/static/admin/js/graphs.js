@@ -83,10 +83,10 @@ IGraphs.PieChart.prototype.draw = function(element) {
     var pieHelper = d3.layout.pie().value(function(d) {return d.value;});
     var pieData = pieHelper(this.data);
     var total = 0;
-    pieData.filter(function(element, index, array) {
+    /*pieData = */pieData.filter(function(element, index, array) {
         total += element.value;
         return (element.value > 0);
-    });
+    }); // figure out what to do about skipping colours
     
     if (pieData.length > 0) {
         // assign local pointers to instance attributes
@@ -167,13 +167,29 @@ IGraphs.BarChart.prototype.draw = function(element) {
     var y = d3.scale.linear()
         .domain([0, max])
         .range([0, 2 / 3.0 * this.height])
+    this.bars.attr("transform", 
+        "translate(" + (this.width - this.column_width * this.data.length)/2.0 + ",0)");
     var bars = this.bars.selectAll("rect").data(data);
     bars.enter().append("svg:g")
-        .attr("class", "bar");
+        .attr("class", "bar")
+        .attr("transform", function(d, i) {
+            return "translate(" + (i * column_width + i) + "," + (height - 60 - y(d, i)) + ")";
+        });
     bars.append("rect")
-        .attr("x", function(d, i) { return i * column_width + i; })
-        .attr("y", function(d, i) { return height - 40 - y(d, i); })
         .attr("height", y)
         .attr("width", column_width)
         .attr("fill", function(d, i) { return getColour(i); });
+    bars.append("text")
+        .attr("class", "value")
+        .attr("text-anchor", "middle")
+        .attr("dy", -8)
+        .attr("dx", column_width/2)
+        .text(function(d, i) { return data[i]; });
+    bars.append("svg:g")
+        .attr("class", "label")
+        .attr("transform", function(d, i) { return "translate(" + (column_width/2 ) + "," + (y(d, i) + 8) + ")"; })
+        .append("text")
+            .attr("text-anchor", "end")
+            .attr("transform", "rotate(-30)")
+            .text(function(d, i) { return labels[i]; });
 };
