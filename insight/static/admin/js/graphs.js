@@ -83,15 +83,22 @@ IGraphs.PieChart.prototype.draw = function(element) {
     var pieHelper = d3.layout.pie().value(function(d) {return d.value;});
     var pieData = pieHelper(this.data);
     var total = 0;
-    /*pieData = */pieData.filter(function(element, index, array) {
+    var getColour = d3.scale.category20();
+    var data = this.data;
+    pieData = pieData.filter(function(element, index, array) {
+        /* 
+         * We need all slices to have colours assigned, even if they are filtered out,
+         * to maintain colour consistency with other graphs that do not filter out 0 values.
+         */
+        array[index].colour = getColour(index);
+        array[index].key = data[index].key;
         total += element.value;
         return (element.value > 0);
-    }); // figure out what to do about skipping colours
+    });
     
     if (pieData.length > 0) {
         // assign local pointers to instance attributes
         var arc = this.arc;
-        var data = this.data;
         var radius = this.radius;
         // helper functions
         var alignText = function(d) {
@@ -102,8 +109,7 @@ IGraphs.PieChart.prototype.draw = function(element) {
             var h = Math.sqrt(c[0]*c[0] + c[1]*c[1]);
             var r = radius + 16;
             return "translate(" + c[0]/h * r + "," + c[1]/h * r + ")";
-        };
-        var getColour = d3.scale.category20();        
+        };       
         // create the svg elements
         this.chart.select(".title")
             .attr("transform", "translate(" + this.width/2 + "," + this.height/2 + ")");
@@ -113,19 +119,19 @@ IGraphs.PieChart.prototype.draw = function(element) {
         slices.append("svg:path")
             .attr("stroke", "white")
             .attr("stroke-width", 0.5)
-            .attr("fill", function(d, i) { return getColour(i); })
+            .attr("fill", function(d, i) { return pieData[i].colour; })
             .attr("d", this.arc);
         slices.append("svg:text")
             .attr("class", "label")
             .attr("text-anchor", alignText)
             .attr("transform", calcOffset)
-            .text(function(d, i) { return data[i].key; });
+            .text(function(d, i) { return pieData[i].key; });
         slices.append("svg:text")
             .attr("class", "percentage")
             .attr("dy", "1.5em")
             .attr("text-anchor", alignText)
             .attr("transform", calcOffset)
-            .text(function(d, i) { return (data[i].value * 100.0 / total + "%"); });
+            .text(function(d, i) { return (pieData[i].value * 100.0 / total + "%"); });
         slices.exit().remove();
     }
 };
