@@ -254,7 +254,7 @@ IGraphs.LineChart.prototype.constructor = IGraphs.LineChart;
 IGraphs.LineChart.prototype.supr = IGraphs.Graph.prototype;
 
 // if use_count_as_range is false, range_column_index is required. key_column_index is optional.
-IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index, use_count_as_range, range_column_index, key_column_index) {
+IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index, use_count_as_range, key_column_index, range_column_index) {
     var data = undefined;
     var filter = function(val){
         new_val = parseFloat(val);
@@ -266,19 +266,44 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
         }
         return new_val;
     }
-    if (use_count_as_range)
-        data = this.selectTableData(table_id, [domain_column_index], ['x'], {'x':filter});
-    else
-        data = this.selectTableData(table_id, [domain_column_index, range_column_index], ['x', 'y'], {'x':filter, 'y':filter});
-    // sort data in ascending order on domain
-    data.sort(function(a, b) { return a.x - b.x; });
-    if (use_count_as_range) {
-        var count = 0;
+    indices = [domain_column_index];
+    names = ['x'];
+    if (!use_count_as_range) {
+        indices.push(range_column_index);
+        names.push('y');
+    }
+    if (key_column_index) {
+        indices.push(key_column_index);
+        names.push('key');
+    }
+    data = this.selectTableData(table_id, indices, names, {'x':filter, 'y':filter});
+    var new_data = {};
+    if (key_column_index) {
         for (var i = 0; i < data.length; i++) {
-            count++;
-            data[i]['y'] = count;
+            var d = data[i];
+            if (!new_data[d.key])
+                new_data[d.key] = [d];
+            else
+                new_data[d.key].push(d);
         }
     }
+    else
+        new_data = {'key':data};
+    // sort data in ascending order on domain
+    for (var key in new_data)
+        new_data[key].sort(function(a, b) { return a.x - b.x; });
+    // if no y values specified, use counter as y
+    if (use_count_as_range) {
+        for (var key in new_data) {
+            var count = 0;
+            var d = new_data[key];
+            for (var i = 0; i < d.length; i++) {
+                count++;
+                d[i]['y'] = count;
+            }
+        }
+    }
+    this.data = new_data;
 };
 
 IGraphs.LineChart.prototype.draw = function(element) {

@@ -8,7 +8,7 @@
         window.addEventListener("load", function(){
             IGraphs.init(); // can be called multiple times on a page without effect
             var linechart = new IGraphs.LineChart("Recent registrations", 400, 400, "Date", "Number of registrations");
-            linechart.updateData("result_list", 3, true);
+            linechart.updateData("result_list", 3, true, 2);
             linechart.draw();
         }, false);
     </script>
