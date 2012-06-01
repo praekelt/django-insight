@@ -163,7 +163,7 @@ IGraphs.BarChart.prototype.supr = IGraphs.Graph.prototype;
 
 IGraphs.BarChart.prototype.updateData = function(table_id, key_column_index, value_column_index) {
     this.selectKeyValue(table_id, key_column_index, value_column_index);
-    this.column_width = 0.6 * this.width / this.data.length;
+    this.column_width = 0.66 * this.width / this.data.length;
 };
 
 IGraphs.BarChart.prototype.draw = function(element) {
@@ -184,14 +184,14 @@ IGraphs.BarChart.prototype.draw = function(element) {
     getValues = getValues(this.data, data, labels);
     var y = d3.scale.linear()
         .domain([0, max])
-        .range([0, 2 / 3.0 * this.height]);
+        .range([0, 0.66 * this.height]);
     var y_inverse = d3.scale.linear()
         .domain([0, max])
-        .range([0, -2 / 3.0 * this.height]);
+        .range([0, -0.66 * this.height]);
     // create measure lines and labels
     this.measure.attr("transform",
         "translate(" + this.column_width + "," + (height - 60) + ")");
-    var ticks = Math.round(2 / 3.0 * this.height / (50 * 5)) * 5;
+    var ticks = Math.round(0.66 * this.height / (50 * 5)) * 5;
     ticks = y_inverse.ticks(ticks);
     this.measure.selectAll("line").data(ticks)
         .enter().append("line")
@@ -245,7 +245,7 @@ IGraphs.LineChart = function(title, width, height, domain_name, range_name) {
     this.range_name = range_name;
     this.measure = this.chart.append("svg:g")
         .attr("class", "measure");
-    this.bars = this.chart.append("svg:g")
+    this.lines = this.chart.append("svg:g")
         .attr("class", "lines");
 };
 
@@ -253,11 +253,11 @@ IGraphs.LineChart.prototype = new IGraphs.Graph();
 IGraphs.LineChart.prototype.constructor = IGraphs.LineChart;
 IGraphs.LineChart.prototype.supr = IGraphs.Graph.prototype;
 
-// if use_count_as_range is false, range_column_index is required. key_column_index is optional.
-IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index, use_count_as_range, key_column_index, range_column_index) {
+// if use_count is false, range_column_index is required. key_column_index is optional.
+IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index, use_count, key_column_index, range_column_index) {
     var data = undefined;
     var filter = function(val){
-        new_val = parseFloat(val);
+        var new_val = parseFloat(val);
         if (!new_val) {
             m = IGraphs.gmt.exec(val);
             new_val = new Date(m[1] + " " + m[2] + ", " + m[3] + " "
@@ -266,9 +266,9 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
         }
         return new_val;
     }
-    indices = [domain_column_index];
-    names = ['x'];
-    if (!use_count_as_range) {
+    var indices = [domain_column_index];
+    var names = ['x'];
+    if (!use_count) {
         indices.push(range_column_index);
         names.push('y');
     }
@@ -292,20 +292,82 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
     // sort data in ascending order on domain
     for (var key in new_data)
         new_data[key].sort(function(a, b) { return a.x - b.x; });
-    // if no y values specified, use counter as y
-    if (use_count_as_range) {
-        for (var key in new_data) {
-            var count = 0;
-            var d = new_data[key];
-            for (var i = 0; i < d.length; i++) {
-                count++;
-                d[i]['y'] = count;
-            }
-        }
-    }
+    // if no y values specified, use count as y
+    this.use_count = use_count;
     this.data = new_data;
 };
 
 IGraphs.LineChart.prototype.draw = function(element) {
-    
+    // define domain and range scales
+    var max_domain = Number.MIN_VALUE;
+    var max_range = Number.MIN_VALUE;
+    var min_domain = Number.MAX_VALUE;
+    var min_range = Number.MAX_VALUE;
+    for (var key in this.data) {
+        var range = this.data[key];
+        var max_in_range = 0
+        var min_in_range = 0;
+        // since data is sorted in ascending order on domain
+        if (range[range.length-1].x > max_domain)
+            max_domain = range[range.length-1].x;
+        if (range[0].x < min_domain)
+            min_domain = range[0].x;
+        if (this.use_count) {
+            if (range.length > max_in_range)
+                max_in_range = range.length;
+            min_in_range = 0;
+        }
+        else {
+            for (var i = 0; i < range.length; i++) {
+                if (range[i].y > max_in_range)
+                    max_in_range = range[i].y;
+                if (range[i].y < min_in_range)
+                    min_in_range = range[i].y;
+            }
+        }
+        if (max_in_range > max_range)
+            max_range = max_in_range;
+        if (min_in_range < min_range)
+            min_range = min_in_range;
+    }
+    var x  = d3.scale.linear().domain([min_domain, max_domain]).range([0, 0.66 * this.width]);
+    var y  = d3.scale.linear().domain([min_range, max_range]).range([0.66 * this.height, 0]);
+    if (max_domain.constructor == Date)
+        x = d3.time.scale().domain([min_domain, max_domain]).range([0, 0.66 * this.width]);
+    if (max_range.constructor == Date)
+        y = d3.time.scale().domain([min_range, max_range]).range([0.66 * this.height, 0]);
+    var ranges = [];
+    var labels = [];
+    for (var key in this.data) {
+        ranges.push(this.data[key]);
+        labels.push(key);
+    }
+    var getColour = d3.scale.category20();
+    var offset_frac = (1 - 0.66) / 2.0;
+    this.lines.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
+    var lines = this.lines.selectAll("path.line").data(ranges);
+    lines.enter().append("svg:path")
+        .attr("d", d3.svg.line()
+            .x(function(d, i) { return x(d.x); })
+            .y(function(d, i) { return d.y ? y(d.y) : y(i + 1); }))
+        .style("stroke", function(d, i) { return getColour(i); })
+        .style("stroke-width", 3)
+        .style("fill", "none");
+    this.measure.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
+    var ticks = Math.round(0.66 * this.height / (50 * 5)) * 5;
+    y.range([0.66 * this.height,0]);
+    this.measure.selectAll("line").data(y.ticks(ticks))
+        .enter().append("line")
+        .attr("x2", (offset_frac + 0.66 * this.width))
+        .attr("y1", y)
+        .attr("y2", y)
+        .style("stroke", "#CCCCCC");
+    this.measure.selectAll(".rule").data(y.ticks(ticks))
+        .enter().append("text")
+        .attr("class", "value")
+        .attr("x", -4)
+        .attr("y", y)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", "end")
+        .text(String);
 };
