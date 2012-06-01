@@ -130,7 +130,7 @@ IGraphs.PieChart.prototype.draw = function(element) {
             .attr("transform", calcOffset)
             .text(function(d, i) { return pieData[i].key; });
         slices.append("svg:text")
-            .attr("class", "percentage")
+            .attr("class", "value percentage")
             .attr("dy", "1.5em")
             .attr("text-anchor", alignText)
             .attr("transform", calcOffset)
@@ -144,6 +144,8 @@ IGraphs.PieChart.prototype.draw = function(element) {
  */
 IGraphs.BarChart = function(title, width, height) {
     IGraphs.Graph.call(this, title, width, height);
+    this.measure = this.chart.append("svg:g")
+        .attr("class", "measure")
     this.bars = this.chart.append("svg:g")
         .attr("class", "bars")
 };
@@ -175,7 +177,30 @@ IGraphs.BarChart.prototype.draw = function(element) {
     getValues = getValues(this.data, data, labels);
     var y = d3.scale.linear()
         .domain([0, max])
-        .range([0, 2 / 3.0 * this.height])
+        .range([0, 2 / 3.0 * this.height]);
+    var y_inverse = d3.scale.linear()
+        .domain([0, max])
+        .range([0, -2 / 3.0 * this.height]);
+    // create measure lines and labels
+    this.measure.attr("transform",
+        "translate(" + this.column_width + "," + (height - 60) + ")");
+    var ticks = Math.round(2 / 3.0 * this.height / (50 * 5)) * 5;
+    ticks = y_inverse.ticks(ticks);
+    this.measure.selectAll("line").data(ticks)
+        .enter().append("line")
+        .attr("x2", this.width - 2 * column_width)
+        .attr("y1", y_inverse)
+        .attr("y2", y_inverse)
+        .style("stroke", "#CCCCCC");
+    this.measure.selectAll(".rule").data(ticks)
+        .enter().append("text")
+        .attr("class", "value")
+        .attr("x", -4)
+        .attr("y", y_inverse)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", "end")
+        .text(String);
+    // create bars and labels
     this.bars.attr("transform", 
         "translate(" + (this.width - this.column_width * this.data.length)/2.0 + ",0)");
     var bars = this.bars.selectAll("rect").data(data);

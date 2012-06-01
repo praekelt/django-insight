@@ -27,3 +27,7 @@
 .graph .percentage {
     font-size: 11px;
 }
+
+.graph .measure .value {
+    font-style: italic;
+}
