@@ -4,6 +4,7 @@ var IGraphs = IGraphs || {}; // namespace for Insight Graphs
 IGraphs.init = function() {
     if (!IGraphs.has_called_init) {
         IGraphs.container = d3.select("#graphs");
+        IGraphs.gmt = new RegExp("([a-zA-Z]{3,9}) (\\d{1,2}), (\\d{4}), (\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.");
         IGraphs.has_called_init = true;
     }
 };
@@ -44,14 +45,20 @@ IGraphs.Graph.prototype = {
             ['key', 'value']
         );
     },
-    selectTableData: function(table_id, column_indices, column_names) {
+    selectTableData: function(table_id, column_indices, column_names, filters) {
+        if (!filters)
+            filters = {};
         var data = [];
         var rows = d3.selectAll("#" + table_id + " tbody tr");
         for (var i = 0; i < rows[0].length; i++) {
             var row = d3.select(rows[0][i]).selectAll("td, th");
             var r = {}
-            for (var j = 0; j < column_indices.length; j++)
-                r[column_names[j]] = row[0][column_indices[j]].innerText;
+            for (var j = 0; j < column_indices.length; j++) {
+                if (filters[column_names[j]])
+                    r[column_names[j]] = filters[column_names[j]](row[0][column_indices[j]].innerText);
+                else
+                    r[column_names[j]] = row[0][column_indices[j]].innerText;
+            }
             data.push(r);
         }
         return data;
@@ -232,8 +239,10 @@ IGraphs.BarChart.prototype.draw = function(element) {
 /*
  * LineChart object
  */
-IGraphs.LineChart = function(title, width, height) {
+IGraphs.LineChart = function(title, width, height, domain_name, range_name) {
     IGraphs.Graph.call(this, title, width, height);
+    this.domain_name = domain_name;
+    this.range_name = range_name;
     this.measure = this.chart.append("svg:g")
         .attr("class", "measure");
     this.bars = this.chart.append("svg:g")
@@ -244,8 +253,32 @@ IGraphs.LineChart.prototype = new IGraphs.Graph();
 IGraphs.LineChart.prototype.constructor = IGraphs.LineChart;
 IGraphs.LineChart.prototype.supr = IGraphs.Graph.prototype;
 
-IGraphs.LineChart.prototype.updateData = function(table_id, line_name_column, line_column_indices) {
-//     this.data = this.selectTableData(table_id, key_column_index, value_column_index);
+// if use_count_as_range is false, range_column_index is required. key_column_index is optional.
+IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index, use_count_as_range, range_column_index, key_column_index) {
+    var data = undefined;
+    var filter = function(val){
+        new_val = parseFloat(val);
+        if (!new_val) {
+            m = IGraphs.gmt.exec(val);
+            new_val = new Date(m[1] + " " + m[2] + ", " + m[3] + " "
+                + (m[7] == 'a' ? m[4] : parseInt(m[4]) + 12) + ":"
+                + (m[6] ? m[6] : "00") + ":00");
+        }
+        return new_val;
+    }
+    if (use_count_as_range)
+        data = this.selectTableData(table_id, [domain_column_index], ['x'], {'x':filter});
+    else
+        data = this.selectTableData(table_id, [domain_column_index, range_column_index], ['x', 'y'], {'x':filter, 'y':filter});
+    // sort data in ascending order on domain
+    data.sort(function(a, b) { return a.x - b.x; });
+    if (use_count_as_range) {
+        var count = 0;
+        for (var i = 0; i < data.length; i++) {
+            count++;
+            data[i]['y'] = count;
+        }
+    }
 };
 
 IGraphs.LineChart.prototype.draw = function(element) {
