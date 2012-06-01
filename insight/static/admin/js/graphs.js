@@ -145,9 +145,9 @@ IGraphs.PieChart.prototype.draw = function(element) {
 IGraphs.BarChart = function(title, width, height) {
     IGraphs.Graph.call(this, title, width, height);
     this.measure = this.chart.append("svg:g")
-        .attr("class", "measure")
+        .attr("class", "measure");
     this.bars = this.chart.append("svg:g")
-        .attr("class", "bars")
+        .attr("class", "bars");
 };
 
 IGraphs.BarChart.prototype = new IGraphs.Graph();
@@ -221,9 +221,33 @@ IGraphs.BarChart.prototype.draw = function(element) {
         .text(function(d, i) { return data[i]; });
     bars.append("svg:g")
         .attr("class", "label")
-        .attr("transform", function(d, i) { return "translate(" + (column_width/2 ) + "," + (y(d, i) + 8) + ")"; })
+        .attr("transform", function(d, i) {
+            return "translate(" + (column_width/2 ) + "," + (y(d, i) + 8) + ")"; })
         .append("text")
             .attr("text-anchor", "end")
             .attr("transform", "rotate(-30)")
             .text(function(d, i) { return labels[i]; });
+};
+
+/*
+ * LineChart object
+ */
+IGraphs.LineChart = function(title, width, height) {
+    IGraphs.Graph.call(this, title, width, height);
+    this.measure = this.chart.append("svg:g")
+        .attr("class", "measure");
+    this.bars = this.chart.append("svg:g")
+        .attr("class", "lines");
+};
+
+IGraphs.LineChart.prototype = new IGraphs.Graph();
+IGraphs.LineChart.prototype.constructor = IGraphs.LineChart;
+IGraphs.LineChart.prototype.supr = IGraphs.Graph.prototype;
+
+IGraphs.LineChart.prototype.updateData = function(table_id, line_name_column, line_column_indices) {
+//     this.data = this.selectTableData(table_id, key_column_index, value_column_index);
+};
+
+IGraphs.LineChart.prototype.draw = function(element) {
+    
 };

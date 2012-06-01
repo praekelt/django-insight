@@ -1,16 +1,19 @@
-#content-main {
-    width: 50%;
+#container {
+    width: 100%;
 }
 
 #content-main, #graphs{
-    display: inline-block;
+    width: 45%;
 }
 
 #graphs {
-    float: left;
-    padding: 15px;
+    float: right;
     margin-left: 15px;
     border: 1px solid #CCCCCC;
+}
+
+#graphs > div {
+    float: right;
 }
 
 .graph .title {
