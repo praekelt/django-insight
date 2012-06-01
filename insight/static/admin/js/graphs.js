@@ -2,7 +2,10 @@ var IGraphs = IGraphs || {}; // namespace for Insight Graphs
 
 // Initialize global IGraphs variables here
 IGraphs.init = function() {
-    IGraphs.container = d3.select("#graphs");
+    if (!IGraphs.has_called_init) {
+        IGraphs.container = d3.select("#graphs");
+        IGraphs.has_called_init = true;
+    }
 };
 
 /*
@@ -15,7 +18,7 @@ IGraphs.Graph = function(title, width, height) {
     if (IGraphs.container) {
         this.chart = IGraphs.container.append("div")
             .append("svg:svg")
-            .attr("class", "graph")
+            .attr("class", "graph graph-" + this.title.toLowerCase())
             .attr("width", width)
             .attr("height", height);
         this.chart.append("svg:text")
