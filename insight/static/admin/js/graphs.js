@@ -41,7 +41,7 @@ IGraphs.Graph = function(title, width, height) {
 
 IGraphs.Graph.prototype = {
     constructor: IGraphs.Graph,
-    draw: function(element) {
+    draw: function() {
         // override in children
     },
     updateData: function() {
@@ -98,7 +98,7 @@ IGraphs.PieChart.prototype.updateData = function(table_id, key_column_index, val
     this.selectKeyValue(table_id, key_column_index, value_column_index);
 };
 
-IGraphs.PieChart.prototype.draw = function(element) {
+IGraphs.PieChart.prototype.draw = function() {
     var pieHelper = d3.layout.pie().value(function(d) {return d.value;});
     var pieData = pieHelper(this.data);
     var total = 0;
@@ -168,7 +168,7 @@ IGraphs.BarChart.prototype.updateData = function(table_id, key_column_index, val
     this.column_width = 0.66 * this.width / this.data.length;
 };
 
-IGraphs.BarChart.prototype.draw = function(element) {
+IGraphs.BarChart.prototype.draw = function() {
     var max = 0;
     var column_width = this.column_width;
     var getColour = d3.scale.category20(); 
@@ -297,7 +297,8 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
     this.data = data;
 };
 
-IGraphs.LineChart.prototype.draw = function(element) {
+// piecewise = true to draw a step function, smooth = true to interpolate between data points (only valid if piecewise = false)
+IGraphs.LineChart.prototype.draw = function(piecewise, smooth) {
     var e_domain = [];
     var e_range = this.use_count ? [0] : [];
     this.data.map(function (d, i) { 
@@ -329,9 +330,10 @@ IGraphs.LineChart.prototype.draw = function(element) {
     lines.enter().append("svg:path")
         .datum(function(d, i) { return d.range; })
         .attr("d", d3.svg.line()
+            .interpolate(piecewise ? "step-after" : (smooth ? "basis" : "linear"))
             .x(function(d, i) { return x(d.x); })
             .y(function(d, i) { return d.y ? y(d.y) : y(i + 1); }))
-        .style("stroke", function(d, i) { return IGraphs.hexToRGBA(getColour(d[i].key), 0.75); })
+        .style("stroke", function(d, i) { return IGraphs.hexToRGBA(getColour(d[i].key), 1); })
         .style("stroke-width", 3)
         .style("fill", "none");
     this.measure.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
