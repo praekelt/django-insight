@@ -5,9 +5,18 @@ IGraphs.init = function() {
     if (!IGraphs.has_called_init) {
         IGraphs.container = d3.select("#graphs");
         IGraphs.gmt = new RegExp("([a-zA-Z]{3,9}) (\\d{1,2}), (\\d{4}), (\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.");
+        IGraphs.hex_colour = new RegExp("^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$");
         IGraphs.has_called_init = true;
     }
 };
+
+IGraphs.hexToRGBA = function(hex, alpha) {
+    m = IGraphs.hex_colour.exec(hex);
+    return "rgba(" + parseInt(m[1],16) + ","
+        + parseInt(m[2],16) + ","
+        + parseInt(m[3],16) + ","
+        + alpha + ")";
+}
 
 /*
  * Base Graph object
@@ -94,14 +103,7 @@ IGraphs.PieChart.prototype.draw = function(element) {
     var pieData = pieHelper(this.data);
     var total = 0;
     var getColour = d3.scale.category20();
-    var data = this.data;
     pieData = pieData.filter(function(element, index, array) {
-        /* 
-         * We need all slices to have colours assigned, even if they are filtered out,
-         * to maintain colour consistency with other graphs that do not filter out 0 values.
-         */
-        array[index].colour = getColour(index);
-        array[index].key = data[index].key;
         total += element.value;
         return (element.value > 0);
     });
@@ -129,19 +131,19 @@ IGraphs.PieChart.prototype.draw = function(element) {
         slices.append("svg:path")
             .attr("stroke", "white")
             .attr("stroke-width", 0.5)
-            .attr("fill", function(d, i) { return pieData[i].colour; })
+            .attr("fill", function(d, i) { return getColour(d.data.key); })
             .attr("d", this.arc);
         slices.append("svg:text")
             .attr("class", "label")
             .attr("text-anchor", alignText)
             .attr("transform", calcOffset)
-            .text(function(d, i) { return pieData[i].key; });
+            .text(function(d, i) { return d.data.key; });
         slices.append("svg:text")
             .attr("class", "value percentage")
             .attr("dy", "1.5em")
             .attr("text-anchor", alignText)
             .attr("transform", calcOffset)
-            .text(function(d, i) { return (pieData[i].value * 100.0 / total + "%"); });
+            .text(function(d, i) { return (d.data.value * 100.0 / total + "%"); });
         slices.exit().remove();
     }
 };
@@ -170,18 +172,8 @@ IGraphs.BarChart.prototype.draw = function(element) {
     var max = 0;
     var column_width = this.column_width;
     var getColour = d3.scale.category20(); 
-    function getValues(in_data, out_vals, out_labels) {
-        for (var i = 0; i < in_data.length; i++){
-            out_vals.push(in_data[i].value);
-            out_labels.push(in_data[i].key);
-            if (in_data[i].value > max)
-                max = in_data[i].value;
-        }
-    };
-    var data = [];
-    var labels = [];
+    var max = d3.max(this.data, function(d) { return d.value; })
     var height = this.height;
-    getValues = getValues(this.data, data, labels);
     var y = d3.scale.linear()
         .domain([0, max])
         .range([0, 0.66 * this.height]);
@@ -190,12 +182,12 @@ IGraphs.BarChart.prototype.draw = function(element) {
         .range([0, -0.66 * this.height]);
     // create measure lines and labels
     this.measure.attr("transform",
-        "translate(" + this.column_width + "," + (height - 60) + ")");
+        "translate(" + this.column_width + "," + (this.height - 60) + ")");
     var ticks = Math.round(0.66 * this.height / (50 * 5)) * 5;
     ticks = y_inverse.ticks(ticks);
     this.measure.selectAll("line").data(ticks)
         .enter().append("line")
-        .attr("x2", this.width - 2 * column_width)
+        .attr("x2", this.width - 2 * this.column_width)
         .attr("y1", y_inverse)
         .attr("y2", y_inverse)
         .style("stroke", "#CCCCCC");
@@ -210,30 +202,30 @@ IGraphs.BarChart.prototype.draw = function(element) {
     // create bars and labels
     this.bars.attr("transform", 
         "translate(" + (this.width - this.column_width * this.data.length)/2.0 + ",0)");
-    var bars = this.bars.selectAll("rect").data(data);
+    var bars = this.bars.selectAll("rect").data(this.data);
     bars.enter().append("svg:g")
         .attr("class", "bar")
         .attr("transform", function(d, i) {
-            return "translate(" + (i * column_width + i) + "," + (height - 60 - y(d, i)) + ")";
+            return "translate(" + (i * column_width + i) + "," + (height - 60 - y(d.value)) + ")";
         });
     bars.append("rect")
-        .attr("height", y)
-        .attr("width", column_width)
-        .attr("fill", function(d, i) { return getColour(i); });
+        .attr("height", function(d) { return y(d.value);})
+        .attr("width", this.column_width)
+        .attr("fill", function(d) { return getColour(d.key); });
     bars.append("text")
         .attr("class", "value")
         .attr("text-anchor", "middle")
         .attr("dy", -8)
-        .attr("dx", column_width/2)
-        .text(function(d, i) { return data[i]; });
+        .attr("dx", this.column_width/2)
+        .text(function(d) { return d.value; });
     bars.append("svg:g")
         .attr("class", "label")
-        .attr("transform", function(d, i) {
-            return "translate(" + (column_width/2 ) + "," + (y(d, i) + 8) + ")"; })
+        .attr("transform", function(d) {
+            return "translate(" + (column_width/2 ) + "," + (y(d.value) + 8) + ")"; })
         .append("text")
             .attr("text-anchor", "end")
             .attr("transform", "rotate(-30)")
-            .text(function(d, i) { return labels[i]; });
+            .text(function(d) { return d.key; });
 };
 
 /*
@@ -261,7 +253,7 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
         if (!new_val) {
             m = IGraphs.gmt.exec(val);
             new_val = new Date(m[1] + " " + m[2] + ", " + m[3] + " "
-                + (m[7] == 'a' ? m[4] : parseInt(m[4]) + 12) + ":"
+                + (m[7] == 'a' || m[4] == '12' ? m[4] : parseInt(m[4]) + 12) + ":"
                 + (m[6] ? m[6] : "00") + ":00");
         }
         return new_val;
@@ -290,67 +282,50 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
     else
         new_data = {'key':data};
     // sort data in ascending order on domain
-    for (var key in new_data)
+    data = [];
+    for (var key in new_data) {
         new_data[key].sort(function(a, b) { return a.x - b.x; });
+        data.push({key: key, range: new_data[key]});
+    }
+        
     // if no y values specified, use count as y
     this.use_count = use_count;
-    this.data = new_data;
+    this.data = data;
 };
 
 IGraphs.LineChart.prototype.draw = function(element) {
-    // define domain and range scales
-    var max_domain = Number.MIN_VALUE;
-    var max_range = Number.MIN_VALUE;
-    var min_domain = Number.MAX_VALUE;
-    var min_range = Number.MAX_VALUE;
-    for (var key in this.data) {
-        var range = this.data[key];
-        var max_in_range = 0
-        var min_in_range = 0;
-        // since data is sorted in ascending order on domain
-        if (range[range.length-1].x > max_domain)
-            max_domain = range[range.length-1].x;
-        if (range[0].x < min_domain)
-            min_domain = range[0].x;
-        if (this.use_count) {
-            if (range.length > max_in_range)
-                max_in_range = range.length;
-            min_in_range = 0;
-        }
+    var e_domain = [];
+    var e_range = this.use_count ? [0] : [];
+    this.data.map(function (d, i) { 
+        e_domain.push.apply(e_domain, d3.extent(d.range, function (d, i) {
+            return d.x;
+        }));
+        if (!d.range[0].y)
+            e_range.push(d.range.length);
         else {
-            for (var i = 0; i < range.length; i++) {
-                if (range[i].y > max_in_range)
-                    max_in_range = range[i].y;
-                if (range[i].y < min_in_range)
-                    min_in_range = range[i].y;
-            }
+            e_range.push.apply(e_range, d3.extent(d.range, function (d, i) {
+                return d.y;
+            }));
         }
-        if (max_in_range > max_range)
-            max_range = max_in_range;
-        if (min_in_range < min_range)
-            min_range = min_in_range;
-    }
-    var x  = d3.scale.linear().domain([min_domain, max_domain]).range([0, 0.66 * this.width]);
-    var y  = d3.scale.linear().domain([min_range, max_range]).range([0.66 * this.height, 0]);
-    if (max_domain.constructor == Date)
-        x = d3.time.scale().domain([min_domain, max_domain]).range([0, 0.66 * this.width]);
-    if (max_range.constructor == Date)
-        y = d3.time.scale().domain([min_range, max_range]).range([0.66 * this.height, 0]);
-    var ranges = [];
-    var labels = [];
-    for (var key in this.data) {
-        ranges.push(this.data[key]);
-        labels.push(key);
-    }
+    });
+    if (e_domain[0].constructor == Date)
+        var x = d3.time.scale().domain(d3.extent(e_domain)).range([0, 0.66 * this.width]);
+    else
+        var x  = d3.scale.linear().domain(d3.extent(e_domain)).range([0, 0.66 * this.width]);
+    if (e_range[0].constructor == Date)
+        var y = d3.time.scale().domain(d3.extent(e_range)).range([0.66 * this.height, 0]);
+    else
+        var y  = d3.scale.linear().domain(d3.extent(e_range)).range([0.66 * this.height, 0]);
     var getColour = d3.scale.category20();
     var offset_frac = (1 - 0.66) / 2.0;
     this.lines.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
-    var lines = this.lines.selectAll("path.line").data(ranges);
+    var lines = this.lines.selectAll("path.line").data(this.data);
     lines.enter().append("svg:path")
+        .datum(function(d, i) { return d.range; })
         .attr("d", d3.svg.line()
             .x(function(d, i) { return x(d.x); })
             .y(function(d, i) { return d.y ? y(d.y) : y(i + 1); }))
-        .style("stroke", function(d, i) { return getColour(i); })
+        .style("stroke", function(d, i) { return IGraphs.hexToRGBA(getColour(d[i].key), 0.75); })
         .style("stroke-width", 3)
         .style("fill", "none");
     this.measure.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
