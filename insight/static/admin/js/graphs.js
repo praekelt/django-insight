@@ -289,50 +289,67 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
     data = [];
     for (var key in new_data) {
         new_data[key].sort(function(a, b) { return a.x - b.x; });
-        data.push({key: key, range: new_data[key]});
+        data.push({key: key, range: !use_count ? new_data[key] : new_data[key].map(
+            function(d, i){ d.y = i + 1; return d; })
+        });
     }
-        
-    // if no y values specified, use count as y
     this.use_count = use_count;
     this.data = data;
 };
 
-// piecewise = true to draw a step function, smooth = true to interpolate between data points (only valid if piecewise = false)
-IGraphs.LineChart.prototype.draw = function(piecewise, smooth) {
+// piecewise = true to draw a step function, smooth = true to interpolate between data points (ignored if piecewise = true)
+IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smooth) {
     var e_domain = [];
     var e_range = this.use_count ? [0] : [];
-    this.data.map(function (d, i) { 
-        e_domain.push.apply(e_domain, d3.extent(d.range, function (d, i) {
+    this.data.map(function (d, i) {
+        var extent = d3.extent(d.range, function (d, i) {
             return d.x;
-        }));
-        if (!d.range[0].y)
-            e_range.push(d.range.length);
-        else {
-            e_range.push.apply(e_range, d3.extent(d.range, function (d, i) {
-                return d.y;
-            }));
-        }
+        });
+        d.minX = extent[0];
+        d.maxX = extent[1];
+        e_domain.push.apply(e_domain, extent);
+        extent = d3.extent(d.range, function (d, i) {
+            return d.y;
+        });
+        d.minY = extent[0];
+        d.maxY = extent[1];
+        e_range.push.apply(e_range, extent);
     });
     var domain_is_datetime = e_domain[0].constructor == Date;
     var range_is_datetime = e_range[0].constructor == Date;
+    e_domain = d3.extent(e_domain);
+    e_range = d3.extent(e_range);
     if (domain_is_datetime)
-        var x = d3.time.scale().domain(d3.extent(e_domain)).range([0, 0.66 * this.width]);
+        var x = d3.time.scale().domain(e_domain).range([0, 0.66 * this.width]);
     else
-        var x  = d3.scale.linear().domain(d3.extent(e_domain)).range([0, 0.66 * this.width]);
+        var x  = d3.scale.linear().domain(e_domain).range([0, 0.66 * this.width]);
     if (range_is_datetime)
-        var y = d3.time.scale().domain(d3.extent(e_range)).range([0.66 * this.height, 0]);
+        var y = d3.time.scale().domain(e_range).range([0.66 * this.height, 0]);
     else
-        var y  = d3.scale.linear().domain(d3.extent(e_range)).range([0.66 * this.height, 0]);
+        var y  = d3.scale.linear().domain(e_range).range([0.66 * this.height, 0]);
     var getColour = d3.scale.category20();
     var offset_frac = (1 - 0.66) / 2.0;
     this.lines.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
-    var lines = this.lines.selectAll("path.line").data(this.data);
+    var data = this.data;
+    if (stretch_over_domain)
+    {
+        var use_count = this.use_count;
+        data = data.map(function (d, i) {
+            var new_obj = {key: d.key, range: d.range.slice()};
+            new_obj.range.splice(0, 0, {key: d.key, x: e_domain[0], y: d.minY});
+            new_obj.range.push({key: d.key, x: e_domain[1], y: d.maxY});
+            if (use_count)
+                new_obj.range[0].y = 0;
+            return new_obj;
+        });
+    }   
+    var lines = this.lines.selectAll("path.line").data(data);
     lines.enter().append("svg:path")
         .datum(function(d, i) { return d.range; })
         .attr("d", d3.svg.line()
             .interpolate(piecewise ? "step-after" : (smooth ? "basis" : "linear"))
             .x(function(d, i) { return x(d.x); })
-            .y(function(d, i) { return d.y ? y(d.y) : y(i + 1); }))
+            .y(function(d, i) { return y(d.y); }))
         .style("stroke", function(d, i) { return IGraphs.hexToRGBA(getColour(d[i].key), 1); })
         .style("stroke-width", 3)
         .style("fill", "none");

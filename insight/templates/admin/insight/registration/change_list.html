@@ -9,10 +9,10 @@
             IGraphs.init(); // can be called multiple times on a page without effect
             var linechart1 = new IGraphs.LineChart("All recent registrations", 600, 400, "Date", "Number of registrations");
             linechart1.updateData("result_list", 3, true);
-            linechart1.draw(false, true);
+            //linechart1.draw(true, false, true);
             var linechart2 = new IGraphs.LineChart("Recent registrations by origin", 600, 400, "Date", "Number of registrations");
             linechart2.updateData("result_list", 3, true, 2);
-            linechart2.draw(true, false);
+            linechart2.draw(true, true, false);
         }, false);
     </script>
 {% endblock %}
