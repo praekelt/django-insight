@@ -30,7 +30,7 @@
     font-weight: bold;
 }
 
-.graph .percentage {
+.graph .percentage, .graph .datetime {
     font-size: 11px;
 }
 

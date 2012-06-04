@@ -237,6 +237,10 @@ IGraphs.LineChart = function(title, width, height, domain_name, range_name) {
     this.range_name = range_name;
     this.measure = this.chart.append("svg:g")
         .attr("class", "measure");
+    this.measure.append("svg:g")
+        .attr("class", "domain");
+    this.measure.append("svg:g")
+        .attr("class", "range");
     this.lines = this.chart.append("svg:g")
         .attr("class", "lines");
 };
@@ -308,11 +312,13 @@ IGraphs.LineChart.prototype.draw = function(element) {
             }));
         }
     });
-    if (e_domain[0].constructor == Date)
+    var domain_is_datetime = e_domain[0].constructor == Date;
+    var range_is_datetime = e_range[0].constructor == Date;
+    if (domain_is_datetime)
         var x = d3.time.scale().domain(d3.extent(e_domain)).range([0, 0.66 * this.width]);
     else
         var x  = d3.scale.linear().domain(d3.extent(e_domain)).range([0, 0.66 * this.width]);
-    if (e_range[0].constructor == Date)
+    if (range_is_datetime)
         var y = d3.time.scale().domain(d3.extent(e_range)).range([0.66 * this.height, 0]);
     else
         var y  = d3.scale.linear().domain(d3.extent(e_range)).range([0.66 * this.height, 0]);
@@ -331,18 +337,36 @@ IGraphs.LineChart.prototype.draw = function(element) {
     this.measure.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
     var ticks = Math.round(0.66 * this.height / (50 * 5)) * 5;
     y.range([0.66 * this.height,0]);
-    this.measure.selectAll("line").data(y.ticks(ticks))
+    this.measure.select(".range").selectAll("line").data(y.ticks(ticks))
         .enter().append("line")
         .attr("x2", (offset_frac + 0.66 * this.width))
         .attr("y1", y)
         .attr("y2", y)
         .style("stroke", "#CCCCCC");
-    this.measure.selectAll(".rule").data(y.ticks(ticks))
+    this.measure.select(".range").selectAll(".range-value").data(y.ticks(ticks))
         .enter().append("text")
-        .attr("class", "value")
+        .attr("class", "value range-value" + (range_is_datetime ? " datetime" : ""))
         .attr("x", -4)
         .attr("y", y)
         .attr("dy", "0.35em")
         .attr("text-anchor", "end")
-        .text(String);
+        .text(range_is_datetime ? x.tickFormat(ticks) : String);
+    ticks = Math.round(0.66 * this.width / (50 * 5)) * 5;
+    var domain_group = this.measure.select(".domain")
+        .attr("transform", "translate(0," + (0.66 * this.height + 16) + ")");
+    domain_group = domain_group.selectAll("g").data(x.ticks(ticks))
+        .enter().append("svg:g")
+        .attr("transform", function(d, i) {
+            return "translate(" + x(d) + ",0)";
+        })
+    domain_group.append("text")
+        .attr("class", "value domain-value" + (domain_is_datetime ? " datetime" : ""))
+        .attr("text-anchor", "end")
+        .attr("transform", "rotate(-30)")
+        .text(domain_is_datetime ? x.tickFormat(ticks) : String);
+    domain_group.append("line")
+        .attr("y1", -12)
+        .attr("y2", -20)
+        .style("stroke", "#CCCCCC")
+        .style("stroke-width", 1)
 };
