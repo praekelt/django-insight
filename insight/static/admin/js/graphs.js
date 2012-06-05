@@ -18,6 +18,8 @@ IGraphs.hexToRGBA = function(hex, alpha) {
         + alpha + ")";
 }
 
+IGraphs.getColour = d3.scale.category20();
+
 /*
  * Base Graph object
  */
@@ -47,7 +49,7 @@ IGraphs.Graph.prototype = {
     updateData: function() {
         // override in children
     },
-    makeLegend: function(keys, getColour) {
+    makeLegend: function(keys) {
         this.legend = this.chart.select(".legend");
         if (!this.legend[0][0])
             this.legend = this.chart.append("svg:g")
@@ -62,7 +64,7 @@ IGraphs.Graph.prototype = {
             .attr("width", 16)
             .attr("height", 16)
             .attr("stroke", "#CCCCCC")
-            .attr("fill", function(d) { return getColour(d); });
+            .attr("fill", function(d) { return IGraphs.getColour(d); });
         keys.append("text")
             .attr("class", "label")
             .attr("x", 24)
@@ -124,7 +126,6 @@ IGraphs.PieChart.prototype.draw = function() {
     var pieHelper = d3.layout.pie().value(function(d) {return d.value;});
     var pieData = pieHelper(this.data);
     var total = 0;
-    var getColour = d3.scale.category20();
     pieData = pieData.filter(function(element, index, array) {
         total += element.value;
         return (element.value > 0);
@@ -153,7 +154,7 @@ IGraphs.PieChart.prototype.draw = function() {
         slices.append("svg:path")
             .attr("stroke", "white")
             .attr("stroke-width", 0.5)
-            .attr("fill", function(d, i) { return getColour(d.data.key); })
+            .attr("fill", function(d, i) { return IGraphs.getColour(d.data.key); })
             .attr("d", this.arc);
         slices.append("svg:text")
             .attr("class", "label")
@@ -193,7 +194,6 @@ IGraphs.BarChart.prototype.updateData = function(table_id, key_column_index, val
 IGraphs.BarChart.prototype.draw = function() {
     var max = 0;
     var column_width = this.column_width;
-    var getColour = d3.scale.category20(); 
     var max = d3.max(this.data, function(d) { return d.value; })
     var height = this.height;
     var y = d3.scale.linear()
@@ -233,7 +233,7 @@ IGraphs.BarChart.prototype.draw = function() {
     bars.append("rect")
         .attr("height", function(d) { return y(d.value);})
         .attr("width", this.column_width)
-        .attr("fill", function(d) { return getColour(d.key); });
+        .attr("fill", function(d) { return IGraphs.getColour(d.key); });
     bars.append("text")
         .attr("class", "value")
         .attr("text-anchor", "middle")
@@ -349,7 +349,6 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         var y = d3.time.scale().domain(e_range).range([0.66 * this.height, 0]);
     else
         var y  = d3.scale.linear().domain(e_range).range([0.66 * this.height, 0]);
-    var getColour = d3.scale.category20();
     var offset_frac = (1 - 0.66) / 2.0;
     this.ranges.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
     var data = this.data;
@@ -372,7 +371,7 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
             .interpolate(piecewise ? "step-after" : (smooth ? "basis" : "linear"))
             .x(function(d, i) { return x(d.x); })
             .y(function(d, i) { return y(d.y); }))
-        .style("stroke", function(d, i) { return IGraphs.hexToRGBA(getColour(d[i].key), 1); })
+        .style("stroke", function(d, i) { return IGraphs.hexToRGBA(IGraphs.getColour(d[i].key), 1); })
         .style("stroke-width", 3)
         .style("fill", "none");
     this.measure.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
@@ -410,5 +409,5 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         .attr("y2", -20)
         .style("stroke", "#CCCCCC")
         .style("stroke-width", 1)
-    this.makeLegend(this.data.map(function(d) { return d.key; }), getColour);
+    this.makeLegend(this.data.map(function(d) { return d.key; }));
 };
