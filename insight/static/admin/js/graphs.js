@@ -341,16 +341,27 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
     var range_is_datetime = e_range[0].constructor == Date;
     e_domain = d3.extent(e_domain);
     e_range = d3.extent(e_range);
+    var chartspaceX = this.width;
+    if (this.data.length > 1) {
+        this.makeLegend(this.data.map(function(d) { return d.key; }));
+        var bbox = this.legend[0][0].getBBox();
+        this.legend.attr("transform", "translate(" + (this.width - bbox.width - 16) 
+            + "," + ((this.height - bbox.height) / 2) + ")");
+        chartspaceX = this.width - bbox.width - 16;
+    }
+    var fractX = 0.8;
+    var fractY = 0.7;
     if (domain_is_datetime)
-        var x = d3.time.scale().domain(e_domain).range([0, 0.66 * this.width]);
+        var x = d3.time.scale().domain(e_domain).range([0, fractX * chartspaceX]);
     else
-        var x  = d3.scale.linear().domain(e_domain).range([0, 0.66 * this.width]);
+        var x  = d3.scale.linear().domain(e_domain).range([0, fractX * chartspaceX]);
     if (range_is_datetime)
-        var y = d3.time.scale().domain(e_range).range([0.66 * this.height, 0]);
+        var y = d3.time.scale().domain(e_range).range([fractY * this.height, 0]);
     else
-        var y  = d3.scale.linear().domain(e_range).range([0.66 * this.height, 0]);
-    var offset_frac = (1 - 0.66) / 2.0;
-    this.ranges.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
+        var y  = d3.scale.linear().domain(e_range).range([fractY * this.height, 0]);
+    var offset_fractX = (1 - fractX) / 2.0;
+    var offset_fractY = (1 - fractY) / 2.0;
+    this.ranges.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
     var data = this.data;
     if (stretch_over_domain)
     {
@@ -374,12 +385,12 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         .style("stroke", function(d, i) { return IGraphs.hexToRGBA(IGraphs.getColour(d[i].key), 1); })
         .style("stroke-width", 3)
         .style("fill", "none");
-    this.measure.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
-    var ticks = Math.round(0.66 * this.height / (50 * 5)) * 5;
-    y.range([0.66 * this.height,0]);
+    this.measure.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
+    var ticks = Math.round(fractY * this.height / (50 * 5)) * 5;
+    y.range([fractY * this.height,0]);
     this.measure.select(".range").selectAll("line").data(y.ticks(ticks))
         .enter().append("line")
-        .attr("x2", (offset_frac + 0.66 * this.width))
+        .attr("x2", (offset_fractX + fractX * chartspaceX))
         .attr("y1", y)
         .attr("y2", y)
         .style("stroke", "#CCCCCC");
@@ -391,9 +402,9 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         .attr("dy", "0.35em")
         .attr("text-anchor", "end")
         .text(range_is_datetime ? x.tickFormat(ticks) : String);
-    ticks = Math.round(0.66 * this.width / (50 * 5)) * 5;
+    ticks = Math.round(fractX * chartspaceX / (50 * 5)) * 5;
     var domain_group = this.measure.select(".domain")
-        .attr("transform", "translate(0," + (0.66 * this.height + 16) + ")");
+        .attr("transform", "translate(0," + (fractY * this.height + 16) + ")");
     domain_group = domain_group.selectAll("g").data(x.ticks(ticks))
         .enter().append("svg:g")
         .attr("transform", function(d, i) {
@@ -409,5 +420,4 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         .attr("y2", -20)
         .style("stroke", "#CCCCCC")
         .style("stroke-width", 1)
-    this.makeLegend(this.data.map(function(d) { return d.key; }));
 };
