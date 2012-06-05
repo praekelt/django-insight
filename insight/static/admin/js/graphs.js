@@ -103,9 +103,11 @@ IGraphs.Graph.prototype = {
  */
 IGraphs.PieChart = function(title, width, height) {
     IGraphs.Graph.call(this, title, width, height);
-    this.slices = this.chart.append("svg:g")
-        .attr("class", "slices")
-        .attr("transform", "translate(" + (width/2) + "," + (height/2) + ")");
+    if (this.chart) {
+        this.slices = this.chart.append("svg:g")
+            .attr("class", "slices")
+            .attr("transform", "translate(" + (width/2) + "," + (height/2) + ")");
+    }
     this.radius = width / 2 * 0.6;
     this.arc = d3.svg.arc()
         .startAngle(function(d){ return d.startAngle; })
@@ -176,10 +178,12 @@ IGraphs.PieChart.prototype.draw = function() {
  */
 IGraphs.BarChart = function(title, width, height) {
     IGraphs.Graph.call(this, title, width, height);
-    this.measure = this.chart.append("svg:g")
-        .attr("class", "measure");
-    this.bars = this.chart.append("svg:g")
-        .attr("class", "bars");
+    if (this.chart) {
+        this.measure = this.chart.append("svg:g")
+            .attr("class", "measure");
+        this.bars = this.chart.append("svg:g")
+            .attr("class", "bars");
+    }
 };
 
 IGraphs.BarChart.prototype = new IGraphs.Graph();
@@ -251,28 +255,30 @@ IGraphs.BarChart.prototype.draw = function() {
 };
 
 /*
- * LineChart object
+ * XYChart object
  */
-IGraphs.LineChart = function(title, width, height, domain_name, range_name) {
+IGraphs.XYChart = function(title, width, height, domain_name, range_name) {
     IGraphs.Graph.call(this, title, width, height);
     this.domain_name = domain_name;
     this.range_name = range_name;
-    this.measure = this.chart.append("svg:g")
-        .attr("class", "measure");
-    this.measure.append("svg:g")
-        .attr("class", "domain");
-    this.measure.append("svg:g")
-        .attr("class", "range");
-    this.ranges = this.chart.append("svg:g")
-        .attr("class", "ranges");
+    if (this.chart) {
+        this.measure = this.chart.append("svg:g")
+            .attr("class", "measure");
+        this.measure.append("svg:g")
+            .attr("class", "domain");
+        this.measure.append("svg:g")
+            .attr("class", "range");
+        this.ranges = this.chart.append("svg:g")
+            .attr("class", "ranges");
+    }
 };
 
-IGraphs.LineChart.prototype = new IGraphs.Graph();
-IGraphs.LineChart.prototype.constructor = IGraphs.LineChart;
-IGraphs.LineChart.prototype.supr = IGraphs.Graph.prototype;
+IGraphs.XYChart.prototype = new IGraphs.Graph();
+IGraphs.XYChart.prototype.constructor = IGraphs.XYChart;
+IGraphs.XYChart.prototype.supr = IGraphs.Graph.prototype;
 
 // if use_count is false, range_column_index is required. key_column_index is optional.
-IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index, use_count, key_column_index, range_column_index) {
+IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, use_count, key_column_index, range_column_index) {
     var data = undefined;
     var filter = function(val){
         var new_val = parseFloat(val);
@@ -319,8 +325,11 @@ IGraphs.LineChart.prototype.updateData = function(table_id, domain_column_index,
     this.data = data;
 };
 
-// piecewise = true to draw a step function, smooth = true to interpolate between data points (ignored if piecewise = true)
-IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smooth) {
+/* connected = true to draw a linechart
+ * stretch_over_domain = true to duplicate endpoints to fill the domain
+ * piecewise = true to draw a step function
+ * smooth = true to interpolate between data points (ignored if piecewise = true) */
+IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecewise, smooth) {
     var e_domain = [];
     var e_range = this.use_count ? [0] : [];
     this.data.map(function (d, i) {
@@ -374,27 +383,42 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
                 new_obj.range[0].y = 0;
             return new_obj;
         });
-    }   
-    var ranges = this.ranges.selectAll("path.line").data(data);
-    ranges.enter().append("svg:path")
-        .datum(function(d, i) { return d.range; })
-        .attr("d", d3.svg.line()
-            .interpolate(piecewise ? "step-after" : (smooth ? "basis" : "linear"))
-            .x(function(d, i) { return x(d.x); })
-            .y(function(d, i) { return y(d.y); }))
-        .style("stroke", function(d, i) { return IGraphs.hexToRGBA(IGraphs.getColour(d[i].key), 1); })
-        .style("stroke-width", 3)
-        .style("fill", "none");
+    } 
+    if (connected) {
+        var ranges = this.ranges.selectAll("path").data(data);
+        ranges.enter().append("svg:path")
+            .datum(function(d, i) { return d.range; })
+            .attr("d", d3.svg.line()
+                .interpolate(piecewise ? "step-after" : (smooth ? "basis" : "linear"))
+                .x(function(d, i) { return x(d.x); })
+                .y(function(d, i) { return y(d.y); }))
+            .style("stroke", function(d, i) { return IGraphs.hexToRGBA(IGraphs.getColour(d[i].key), 1); })
+            .style("stroke-width", 3)
+            .style("fill", "none");
+    }
+    else {
+        var radius = Math.floor(fractY * this.height / (e_range[1] - e_range[0]) * 0.5);
+        var ranges = this.ranges.selectAll(".range").data(data);
+        ranges.enter().append("svg:g")
+            .attr("class", "range")
+            .selectAll("circle").data(function(d, i) { return d.range; })
+                .enter().append("circle")
+                .attr("cx", function(d, i) { return x(d.x); })
+                .attr("cy", function(d, i) { return y(d.y); })
+                .attr("r", radius)
+                .style("fill", function(d, i) { return IGraphs.hexToRGBA(IGraphs.getColour(d.key), 0.7); });
+    }
     this.measure.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
     var ticks = Math.round(fractY * this.height / (50 * 5)) * 5;
     y.range([fractY * this.height,0]);
-    this.measure.select(".range").selectAll("line").data(y.ticks(ticks))
+    var m_range = this.measure.select(".range");
+    m_range.selectAll("line").data(y.ticks(ticks))
         .enter().append("line")
         .attr("x2", (offset_fractX + fractX * chartspaceX))
         .attr("y1", y)
         .attr("y2", y)
         .style("stroke", "#CCCCCC");
-    this.measure.select(".range").selectAll(".range-value").data(y.ticks(ticks))
+    m_range.selectAll(".range-value").data(y.ticks(ticks))
         .enter().append("text")
         .attr("class", "value range-value" + (range_is_datetime ? " datetime" : ""))
         .attr("x", -4)
@@ -402,6 +426,16 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         .attr("dy", "0.35em")
         .attr("text-anchor", "end")
         .text(range_is_datetime ? x.tickFormat(ticks) : String);
+    if (this.range_name) { 
+        m_range.selectAll(".axis-label").data([this.range_name])
+            .enter().append("svg:g")
+            .attr("class", "label axis-label")
+            .attr("transform", "translate(" + (-offset_fractY * this.height + 20) + "," + (fractY * 0.5 * this.height) + ")")
+                .append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .text(String);
+    }
     ticks = Math.round(fractX * chartspaceX / (50 * 5)) * 5;
     var domain_group = this.measure.select(".domain")
         .attr("transform", "translate(0," + (fractY * this.height + 16) + ")");
@@ -420,4 +454,28 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         .attr("y2", -20)
         .style("stroke", "#CCCCCC")
         .style("stroke-width", 1)
+    if (this.domain_name) { 
+        this.measure.select(".domain").selectAll(".axis-label").data([this.domain_name])
+            .enter().append("text")
+            .attr("class", "label axis-label")
+            .attr("transform", "translate(" + (0.5 - offset_fractX) * chartspaceX + "," + (offset_fractY * this.height - 20) + ")")
+            .attr("text-anchor", "middle")
+            .text(String);
+    }
+};
+
+/*
+ * LineChart object
+ */
+IGraphs.LineChart = function(title, width, height) {
+    IGraphs.XYChart.call(this, title, width, height, "", "");
+};
+
+IGraphs.LineChart.prototype = new IGraphs.XYChart();
+IGraphs.LineChart.prototype.constructor = IGraphs.LineChart;
+IGraphs.LineChart.prototype.supr = IGraphs.XYChart.prototype;
+
+// piecewise = true to draw a step function, smooth = true to interpolate between data points (ignored if piecewise = true)
+IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smooth) {
+    this.supr.draw.call(this, true, stretch_over_domain, piecewise, smooth);
 };
