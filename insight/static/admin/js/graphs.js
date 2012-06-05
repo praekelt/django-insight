@@ -47,6 +47,28 @@ IGraphs.Graph.prototype = {
     updateData: function() {
         // override in children
     },
+    makeLegend: function(keys, getColour) {
+        this.legend = this.chart.select(".legend");
+        if (!this.legend[0][0])
+            this.legend = this.chart.append("svg:g")
+                .attr("class", "legend");
+        var keys = this.legend.selectAll(".key").data(keys)
+            .enter().append("svg:g")
+            .attr("class", "key")
+            .attr("transform", function(d, i) {
+                return "translate(0," + i * 20 + ")";
+            });
+        keys.append("rect")
+            .attr("width", 16)
+            .attr("height", 16)
+            .attr("stroke", "#CCCCCC")
+            .attr("fill", function(d) { return getColour(d); });
+        keys.append("text")
+            .attr("class", "label")
+            .attr("x", 24)
+            .attr("dy", "1em")
+            .text(String);
+    },
     selectKeyValue: function(table_id, key_column_index, value_column_index) {
         this.data = this.selectTableData(
             table_id, 
@@ -241,8 +263,8 @@ IGraphs.LineChart = function(title, width, height, domain_name, range_name) {
         .attr("class", "domain");
     this.measure.append("svg:g")
         .attr("class", "range");
-    this.lines = this.chart.append("svg:g")
-        .attr("class", "lines");
+    this.ranges = this.chart.append("svg:g")
+        .attr("class", "ranges");
 };
 
 IGraphs.LineChart.prototype = new IGraphs.Graph();
@@ -329,7 +351,7 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         var y  = d3.scale.linear().domain(e_range).range([0.66 * this.height, 0]);
     var getColour = d3.scale.category20();
     var offset_frac = (1 - 0.66) / 2.0;
-    this.lines.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
+    this.ranges.attr("transform", "translate(" + offset_frac * this.width + "," + offset_frac * this.height + ")");
     var data = this.data;
     if (stretch_over_domain)
     {
@@ -343,8 +365,8 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
             return new_obj;
         });
     }   
-    var lines = this.lines.selectAll("path.line").data(data);
-    lines.enter().append("svg:path")
+    var ranges = this.ranges.selectAll("path.line").data(data);
+    ranges.enter().append("svg:path")
         .datum(function(d, i) { return d.range; })
         .attr("d", d3.svg.line()
             .interpolate(piecewise ? "step-after" : (smooth ? "basis" : "linear"))
@@ -388,4 +410,5 @@ IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smoo
         .attr("y2", -20)
         .style("stroke", "#CCCCCC")
         .style("stroke-width", 1)
+    this.makeLegend(this.data.map(function(d) { return d.key; }), getColour);
 };
