@@ -4,7 +4,7 @@ var IGraphs = IGraphs || {}; // namespace for Insight Graphs
 IGraphs.init = function() {
     if (!IGraphs.has_called_init) {
         IGraphs.container = d3.select("#graphs");
-        IGraphs.gmt = new RegExp("([a-zA-Z]{3,9})\\.? (\\d{1,2}), (\\d{4}), (\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.");
+        IGraphs.gmt = new RegExp("([a-zA-Z]{3,9})\\.? (\\d{1,2}), (\\d{4}), (((\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.)|(midnight)|(noon))");
         IGraphs.hex_colour = new RegExp("^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$");
         IGraphs.has_called_init = true;
     }
@@ -284,9 +284,15 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
         var new_val = parseFloat(val);
         if (!new_val) {
             m = IGraphs.gmt.exec(val);
-            new_val = new Date(m[1] + " " + m[2] + ", " + m[3] + " "
-                + (m[7] == 'a' || m[4] == '12' ? m[4] : parseInt(m[4]) + 12) + ":"
-                + (m[6] ? m[6] : "00") + ":00");
+            new_val = m[1] + " " + m[2] + ", " + m[3] + " ";
+            if (m[4] == "midnight")
+                new_val += "00:00:00";
+            else if (m[4] == "noon")
+                new_val += "12:00:00";
+            else
+                new_val += (m[9] == 'a' || m[6] == '12' ? m[6] : parseInt(m[6]) + 12) 
+                + ":" + (m[8] ? m[8] : "00") + ":00";
+            new_val = new Date(new_val);
         }
         return new_val;
     }
