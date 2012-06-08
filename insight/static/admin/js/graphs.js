@@ -4,7 +4,7 @@ var IGraphs = IGraphs || {}; // namespace for Insight Graphs
 IGraphs.init = function() {
     if (!IGraphs.has_called_init) {
         IGraphs.container = d3.select("#graphs");
-        IGraphs.gmt = new RegExp("([a-zA-Z]{3,9}) (\\d{1,2}), (\\d{4}), (\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.");
+        IGraphs.gmt = new RegExp("([a-zA-Z]{3,9})\\.? (\\d{1,2}), (\\d{4}), (\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.");
         IGraphs.hex_colour = new RegExp("^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$");
         IGraphs.has_called_init = true;
     }
