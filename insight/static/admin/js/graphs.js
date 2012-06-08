@@ -403,7 +403,7 @@ IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecew
             .style("fill", "none");
     }
     else {
-        var radius = Math.floor(fractY * this.height / (e_range[1] - e_range[0]) * 0.5);
+        var radius = Math.min(Math.floor(fractY * this.height / (e_range[1] - e_range[0]) * 0.5), 6);
         var ranges = this.ranges.selectAll(".range").data(data);
         ranges.enter().append("svg:g")
             .attr("class", "range")
@@ -484,4 +484,30 @@ IGraphs.LineChart.prototype.supr = IGraphs.XYChart.prototype;
 // piecewise = true to draw a step function, smooth = true to interpolate between data points (ignored if piecewise = true)
 IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smooth) {
     this.supr.draw.call(this, true, stretch_over_domain, piecewise, smooth);
+};
+
+/*
+ * Histogram object
+ */
+IGraphs.Histogram = function(title, width, height, domain_name) {
+    IGraphs.XYChart.call(this, title, width, height, domain_name, "Amount");
+};
+
+IGraphs.Histogram.prototype = new IGraphs.XYChart();
+IGraphs.Histogram.prototype.constructor = IGraphs.Histogram;
+IGraphs.Histogram.prototype.supr = IGraphs.XYChart.prototype;
+
+IGraphs.Histogram.prototype.updateData = function(table_id, domain_column_index, key_column_index) {
+    this.supr.updateData.call(this, table_id, domain_column_index, true, key_column_index);
+};
+
+IGraphs.Histogram.prototype.draw = function() {
+    var chartspaceX = this.width;
+    if (this.data.length > 1) {
+        this.makeLegend(this.data.map(function(d) { return d.key; }));
+        var bbox = this.legend[0][0].getBBox();
+        this.legend.attr("transform", "translate(" + (this.width - bbox.width - 16) 
+            + "," + ((this.height - bbox.height) / 2) + ")");
+        chartspaceX = this.width - bbox.width - 16;
+    }
 };
