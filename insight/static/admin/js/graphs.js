@@ -77,11 +77,7 @@ IGraphs.Graph.prototype = {
             [key_column_index, value_column_index], 
             ['key', 'value']
         );
-        this.data.sort(function (a, b) {
-            if (a.key < b.key) return -1;
-            else if (a.key > b.key) return 1;
-            else return 0;
-        });
+        this.data.sort(function (a, b) { return a.key.localeCompare(b.key); });
     },
     selectTableData: function(table_id, column_indices, column_names, filters) {
         if (!filters)
@@ -334,11 +330,7 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
     }
     this.use_count = use_count;
     this.data = data;
-    this.data.sort(function (a, b) {
-        if (a.key < b.key) return -1;
-        else if (a.key > b.key) return 1;
-        else return 0;
-    });
+    this.data.sort(function (a, b) { return a.key.localeCompare(b.key); });
 };
 
 /* connected = true to draw a linechart
