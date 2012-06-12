@@ -27,6 +27,9 @@ IGraphs.Graph = function(title, width, height) {
     this.title = title;
     this.width = width;
     this.height = height;
+    // sometimes different to width and height to make room for legend, etc.
+    this.chart_width = width;
+    this.chart_height = height;
     if (IGraphs.container) {
         this.chart = IGraphs.container.append("div")
             .append("svg:svg")
@@ -70,6 +73,10 @@ IGraphs.Graph.prototype = {
             .attr("x", 24)
             .attr("dy", "1em")
             .text(String);
+        var bbox = this.legend[0][0].getBBox();
+        this.legend.attr("transform", "translate(" + (this.width - bbox.width - 16) 
+            + "," + ((this.height - bbox.height) / 2) + ")");
+        this.chart_width = this.width - bbox.width - 16;
     },
     selectKeyValue: function(table_id, key_column_index, value_column_index) {
         this.data = this.selectTableData(
@@ -272,6 +279,8 @@ IGraphs.XYChart = function(title, width, height, domain_name, range_name) {
         this.ranges = this.chart.append("svg:g")
             .attr("class", "ranges");
     }
+    this.width_fract = 0.8;
+    this.height_fract = 0.7;
 };
 
 IGraphs.XYChart.prototype = new IGraphs.Graph();
@@ -340,6 +349,68 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
     this.data.sort(function (a, b) { return a.key.localeCompare(b.key); });
 };
 
+IGraphs.XYChart.prototype.drawDomainAxis = function(scale, is_datetime, rotate_labels) {
+    var ticks = Math.round(this.width_fract * this.chart_width / (50 * 5)) * 5;
+    var domain = this.measure.select(".domain")
+        .attr("transform", "translate(0," + (this.height_fract * this.chart_height + 16) + ")");
+    domain = domain.selectAll("g").data(scale.ticks(ticks))
+        .enter().append("svg:g")
+        .attr("transform", function(d, i) {
+            return "translate(" + scale(d, i) + ",0)";
+        })
+    domain.append("text")
+        .attr("class", "value domain-value" + (is_datetime ? " datetime" : ""))
+        .attr("text-anchor", (rotate_labels ? "end" : "middle"))
+        .attr("transform", "rotate(" + (rotate_labels ? -30 : 0) + ")")
+        .text(is_datetime ? scale.tickFormat(ticks) : String);
+    domain.append("line")
+        .attr("y1", -12)
+        .attr("y2", -20)
+        .style("stroke", "#CCCCCC")
+        .style("stroke-width", 1)
+    if (this.domain_name) { 
+        this.measure.select(".domain").selectAll(".axis-label").data([this.domain_name])
+            .enter().append("text")
+            .attr("class", "label axis-label")
+            .attr("transform", "translate("
+                + this.width_fract * 0.5 * this.chart_width + "," 
+                + ((1 - this.height_fract) * 0.5 * this.chart_height - 20) + ")")
+            .attr("text-anchor", "middle")
+            .text(String);
+    }
+}
+
+IGraphs.XYChart.prototype.drawRangeAxis = function(scale, is_datetime) {
+    var ticks = Math.round(this.height_fract * this.chart_height / (50 * 5)) * 5;
+    var range = this.measure.select(".range");
+    range.selectAll("line").data(scale.ticks(ticks))
+        .enter().append("line")
+        .attr("x2", (this.width_fract * this.chart_width))
+        .attr("y1", scale)
+        .attr("y2", scale)
+        .style("stroke", "#CCCCCC");
+    range.selectAll(".range-value").data(scale.ticks(ticks))
+        .enter().append("text")
+        .attr("class", "value range-value" + (is_datetime ? " datetime" : ""))
+        .attr("x", -4)
+        .attr("y", scale)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", "end")
+        .text(is_datetime ? x.tickFormat(ticks) : String);
+    if (this.range_name) { 
+        range.selectAll(".axis-label").data([this.range_name])
+            .enter().append("svg:g")
+            .attr("class", "label axis-label")
+            .attr("transform", "translate(" 
+                + ((1 - this.height_fract) * -0.5 * this.chart_height + 20) + "," 
+                + (this.height_fract * 0.5 * this.chart_height) + ")")
+                .append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .text(String);
+    }
+}
+
 /* connected = true to draw a linechart
  * stretch_over_domain = true to duplicate endpoints to fill the domain
  * piecewise = true to draw a step function
@@ -355,27 +426,19 @@ IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecew
     });
     var domain_is_datetime = e_domain[0].constructor == Date;
     var range_is_datetime = e_range[0].constructor == Date;
-    var chartspaceX = this.width;
-    if (this.data.length > 1) {
+    if (this.data.length > 1) 
         this.makeLegend(this.data.map(function(d) { return d.key; }));
-        var bbox = this.legend[0][0].getBBox();
-        this.legend.attr("transform", "translate(" + (this.width - bbox.width - 16) 
-            + "," + ((this.height - bbox.height) / 2) + ")");
-        chartspaceX = this.width - bbox.width - 16;
-    }
-    var fractX = 0.8;
-    var fractY = 0.7;
     if (domain_is_datetime)
-        var x = d3.time.scale().domain(e_domain).range([0, fractX * chartspaceX]);
+        var x = d3.time.scale().domain(e_domain).range([0, this.width_fract * this.chart_width]);
     else
-        var x  = d3.scale.linear().domain(e_domain).range([0, fractX * chartspaceX]);
+        var x  = d3.scale.linear().domain(e_domain).range([0, this.width_fract * this.chart_width]);
     if (range_is_datetime)
-        var y = d3.time.scale().domain(e_range).range([fractY * this.height, 0]);
+        var y = d3.time.scale().domain(e_range).range([this.height_fract * this.chart_height, 0]);
     else
-        var y  = d3.scale.linear().domain(e_range).range([fractY * this.height, 0]);
-    var offset_fractX = (1 - fractX) / 2.0;
-    var offset_fractY = (1 - fractY) / 2.0;
-    this.ranges.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
+        var y  = d3.scale.linear().domain(e_range).range([this.height_fract * this.chart_height, 0]);
+    var offset_fractX = (1 - this.width_fract) / 2.0;
+    var offset_fractY = (1 - this.height_fract) / 2.0;
+    this.ranges.attr("transform", "translate(" + offset_fractX * this.chart_width + "," + offset_fractY * this.chart_height + ")");
     var data = this.data;
     if (stretch_over_domain)
     {
@@ -402,7 +465,7 @@ IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecew
             .style("fill", "none");
     }
     else {
-        var radius = Math.min(Math.floor(fractY * this.height / (e_range[1] - e_range[0]) * 0.5), 6);
+        var radius = Math.min(Math.floor(this.height_fract * this.chart_height / (e_range[1] - e_range[0]) * 0.5), 6);
         var ranges = this.ranges.selectAll(".range").data(data);
         ranges.enter().append("svg:g")
             .attr("class", "range")
@@ -413,60 +476,10 @@ IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecew
                 .attr("r", radius)
                 .style("fill", function(d, i) { return IGraphs.hexToRGBA(IGraphs.getColour(d.key), 0.7); });
     }
-    this.measure.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
-    var ticks = Math.round(fractY * this.height / (50 * 5)) * 5;
-    y.range([fractY * this.height,0]);
-    var m_range = this.measure.select(".range");
-    m_range.selectAll("line").data(y.ticks(ticks))
-        .enter().append("line")
-        .attr("x2", (offset_fractX + fractX * chartspaceX))
-        .attr("y1", y)
-        .attr("y2", y)
-        .style("stroke", "#CCCCCC");
-    m_range.selectAll(".range-value").data(y.ticks(ticks))
-        .enter().append("text")
-        .attr("class", "value range-value" + (range_is_datetime ? " datetime" : ""))
-        .attr("x", -4)
-        .attr("y", y)
-        .attr("dy", "0.35em")
-        .attr("text-anchor", "end")
-        .text(range_is_datetime ? x.tickFormat(ticks) : String);
-    if (this.range_name) { 
-        m_range.selectAll(".axis-label").data([this.range_name])
-            .enter().append("svg:g")
-            .attr("class", "label axis-label")
-            .attr("transform", "translate(" + (-offset_fractY * this.height + 20) + "," + (fractY * 0.5 * this.height) + ")")
-                .append("text")
-                .attr("text-anchor", "middle")
-                .attr("transform", "rotate(-90)")
-                .text(String);
-    }
-    ticks = Math.round(fractX * chartspaceX / (50 * 5)) * 5;
-    var domain_group = this.measure.select(".domain")
-        .attr("transform", "translate(0," + (fractY * this.height + 16) + ")");
-    domain_group = domain_group.selectAll("g").data(x.ticks(ticks))
-        .enter().append("svg:g")
-        .attr("transform", function(d, i) {
-            return "translate(" + x(d) + ",0)";
-        })
-    domain_group.append("text")
-        .attr("class", "value domain-value" + (domain_is_datetime ? " datetime" : ""))
-        .attr("text-anchor", "end")
-        .attr("transform", "rotate(-30)")
-        .text(domain_is_datetime ? x.tickFormat(ticks) : String);
-    domain_group.append("line")
-        .attr("y1", -12)
-        .attr("y2", -20)
-        .style("stroke", "#CCCCCC")
-        .style("stroke-width", 1)
-    if (this.domain_name) { 
-        this.measure.select(".domain").selectAll(".axis-label").data([this.domain_name])
-            .enter().append("text")
-            .attr("class", "label axis-label")
-            .attr("transform", "translate(" + (0.5 - offset_fractX) * chartspaceX + "," + (offset_fractY * this.height - 20) + ")")
-            .attr("text-anchor", "middle")
-            .text(String);
-    }
+    
+    this.measure.attr("transform", "translate(" + offset_fractX * this.chart_width + "," + offset_fractY * this.chart_height + ")");
+    this.drawRangeAxis(y, range_is_datetime);
+    this.drawDomainAxis(x, domain_is_datetime, true);
 };
 
 /*
@@ -518,29 +531,24 @@ IGraphs.Histogram.prototype.aggregateBy = function(x_intervals) {
 }
 
 IGraphs.Histogram.prototype.draw = function() {
-    var chartspaceX = this.width;
-    if (this.data.length > 1) {
+    if (this.data.length > 1)
         this.makeLegend(this.data.map(function(d) { return d.key; }));
-        var bbox = this.legend[0][0].getBBox();
-        this.legend.attr("transform", "translate(" + (this.width - bbox.width - 16) 
-            + "," + ((this.height - bbox.height) / 2) + ")");
-        chartspaceX = this.width - bbox.width - 16;
-    }
     var min_x = d3.min(this.data, function(d) { return d.min_x; });
     var max_x = d3.max(this.data, function(d) { return d.max_x; });
-    var fractX = 0.8;
-    var fractY = 0.7;
-    var offset_fractX = (1 - fractX) / 2.0;
-    var offset_fractY = (1 - fractY) / 2.0;
     
-    this.measure.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
+    var offset_fractX = (1 - this.width_fract) / 2.0;
+    var offset_fractY = (1 - this.height_fract) / 2.0;
+    
     var domain_is_datetime = max_x.constructor == Date;
-    if (domain_is_datetime)
-        var x = d3.time.scale().domain([min_x, max_x]).range([0, fractX * chartspaceX]);
+    if (domain_is_datetime) {
+        min_x.setSeconds(0); min_x.setMinutes(0); min_x.setHours(0);
+        max_x.setSeconds(59); max_x.setMinutes(59); max_x.setHours(23);
+        var x = d3.time.scale().domain([min_x, max_x]).range([0, this.width_fract * this.chart_width]);
+    }
     else
-        var x = d3.scale.linear().domain([min_x, max_x]).range([0, fractX * chartspaceX]);
+        var x = d3.scale.linear().domain([min_x, max_x]).range([0, this.width_fract * this.chart_width]);
     var ticks = domain_is_datetime ? (max_x.getTime() - min_x.getTime() > 2592000000 * 1.5 ? d3.time.months : d3.time.weeks)
-        : Math.round(fractX * chartspaceX / (50 * 5)) * 5 / 2.0; // half as dense as a normal XYChart
+        : Math.round(this.width_fract * this.chart_width / (50 * 5)) * 5 / 2.0; // half as dense as a normal XYChart
     var x_intervals = x.ticks(ticks);
     x_intervals = x_intervals.map(function(d, i) {
         if (i == 0)
@@ -553,59 +561,27 @@ IGraphs.Histogram.prototype.draw = function() {
     
     this.aggregateBy(x_intervals);
     var max_y = d3.max(this.data, function(d) { return d.max_interval; });
-    var y = d3.scale.linear().domain([0, max_y]).range([0, fractY * this.height]);
-    var y_reverse = d3.scale.linear().domain([0, max_y]).range([fractY * this.height, 0]);
-    var interval_length = fractX * chartspaceX / x_intervals.length;
-    var tick_format = domain_is_datetime ? function(d) { return d.toDateString().substr(4, 6); } : String;
+    var y = d3.scale.linear().domain([0, max_y]).range([0, this.height_fract * this.chart_height]);
+    var y_reverse = d3.scale.linear().domain([0, max_y]).range([this.height_fract * this.chart_height, 0]);
+    var interval_length = this.width_fract * this.chart_width / x_intervals.length;
+    var tick_format = domain_is_datetime ? 
+        function(d) { return d[0].toDateString().substr(4, 6) + " - " + d[1].toDateString().substr(4, 6); } 
+        : function(d) { return d[0] + " - " + d[1]; };
     
-    var domain = this.measure.select(".domain")
-        .attr("transform", "translate(0," + (fractY * this.height + 16) + ")");
-    domain = domain.selectAll("g").data(x_intervals)
-        .enter().append("svg:g")
-        .attr("transform", function(d, i) {
-            return "translate(" + (interval_length * i + interval_length * 0.5) + ",0)";
-        });
-    domain.append("text")
-        .attr("class", "value domain-value" + (domain_is_datetime ? " datetime" : ""))
-        .attr("text-anchor", "middle")
-        .text(function (d) {
-            return tick_format(d[0]) + " - " + tick_format(d[1]);
-        });
-    domain.append("line")
-        .attr("y1", -12)
-        .attr("y2", -20)
-        .style("stroke", "#CCCCCC")
-        .style("stroke-width", 1);
-    if (this.domain_name) { 
-        this.measure.select(".domain").selectAll(".axis-label").data([this.domain_name])
-            .enter().append("text")
-            .attr("class", "label axis-label")
-            .attr("transform", "translate(" + (0.5 - offset_fractX) * chartspaceX + "," + (offset_fractY * this.height - 20) + ")")
-            .attr("text-anchor", "middle")
-            .text(String);
-    }
+    // define custom scale function that behaves like d3.scale
+    function scale(d, i) { return (interval_length * i + interval_length * 0.5); }
+    scale.ticks = function (){ return x_intervals; };
+    scale.tickFormat = function (){ return tick_format; };
     
-    var range = this.measure.select(".range");
-    ticks = Math.round(fractY * this.height / (50 * 5)) * 5;
-    range.selectAll("line").data(y_reverse.ticks(ticks))
-        .enter().append("svg:line")
-        .attr("x2", fractX * chartspaceX)
-        .attr("y1", function (d) { return y_reverse(d); })
-        .attr("y2", function (d) { return y_reverse(d); })
-        .style("stroke", "#CCCCCC");
-    range.selectAll(".range-value").data(y_reverse.ticks(ticks))
-        .enter().append("svg:text")
-        .attr("class", "value range-value")
-        .attr("x", -4)
-        .attr("y", y_reverse)
-        .attr("dy", "0.35em")
-        .attr("text-anchor", "end")
-        .text(String);
+    this.measure.attr("transform", "translate(" + offset_fractX * this.chart_width + "," + offset_fractY * this.chart_height + ")");
+    this.drawDomainAxis(scale, domain_is_datetime);
+    this.drawRangeAxis(y_reverse, false);
     
     var bar_width = interval_length / (this.data.length + 2); // 2 bar space between intervals
-    var height = this.height;
+    var height = this.chart_height;
+    var fract = this.height_fract;
     this.chart.select(".ranges")
-        .attr("transform", "translate(" + (offset_fractX * chartspaceX + bar_width) + "," + (offset_fractY * this.height) + ")")
+        .attr("transform", "translate(" + (offset_fractX * this.chart_width + bar_width) + "," + (offset_fractY * this.chart_height) + ")")
         .selectAll("g").data(this.data)
         .enter().append("svg:g").attr("class", "range")
         .attr("transform", function(d, i) {
@@ -616,6 +592,6 @@ IGraphs.Histogram.prototype.draw = function() {
             .attr("width", bar_width)
             .attr("height", y)
             .attr("transform", function (d, i) { 
-                return "translate(" + (i * interval_length) + ", " + (fractY * height - y(d)) + ")";
+                return "translate(" + (i * interval_length) + ", " + (fract * height - y(d)) + ")";
             });
 };
