@@ -595,8 +595,8 @@ IGraphs.Histogram.prototype.draw = function() {
         .selectAll("rect").data(function(d, i) { return d.intervals; })
         .enter().append("svg:rect")
             .attr("width", bar_width)
-            .attr("height", y)
+            .attr("height", function(d) { return y(d) == 0 ? 1 : y(d); })
             .attr("transform", function (d, i) { 
-                return "translate(" + (i * interval_length) + ", " + (fract * height - y(d)) + ")"
+                return "translate(" + (i * interval_length) + ", " + (fract * height - (y(d) == 0 ? 1 : y(d))) + ")"
             });
 };
