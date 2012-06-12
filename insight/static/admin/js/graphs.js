@@ -320,12 +320,19 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
     }
     else
         new_data = {'key':data};
-    // sort data in ascending order on domain
+    // sort data in ascending order on domain and calculate extent
     data = [];
     for (var key in new_data) {
         new_data[key].sort(function(a, b) { return a.x - b.x; });
-        data.push({key: key, range: !use_count ? new_data[key] : new_data[key].map(
-            function(d, i){ d.y = i + 1; return d; })
+        var extent_x = [new_data[key][0].x, new_data[key][new_data[key].length - 1].x];
+        var extent_y = use_count ? [0, new_data[key].length] : d3.extent(new_data[key], function(d) { return d.y; });
+        data.push({key: key, 
+                  range: !use_count ? new_data[key] : new_data[key].map(
+                    function(d, i){ d.y = i + 1; return d; m}),
+                  min_x: extent_x[0],
+                  max_x: extent_x[1],
+                  min_y: extent_y[0],
+                  max_y: extent_y[1]
         });
     }
     this.use_count = use_count;
@@ -338,26 +345,16 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
  * piecewise = true to draw a step function
  * smooth = true to interpolate between data points (ignored if piecewise = true) */
 IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecewise, smooth) {
-    var e_domain = [];
-    var e_range = this.use_count ? [0] : [];
+    var e_domain = [Number.MAX_VALUE, Number.MIN_VALUE];
+    var e_range = [Number.MAX_VALUE, Number.MIN_VALUE];
     this.data.map(function (d, i) {
-        var extent = d3.extent(d.range, function (d, i) {
-            return d.x;
-        });
-        d.minX = extent[0];
-        d.maxX = extent[1];
-        e_domain.push.apply(e_domain, extent);
-        extent = d3.extent(d.range, function (d, i) {
-            return d.y;
-        });
-        d.minY = extent[0];
-        d.maxY = extent[1];
-        e_range.push.apply(e_range, extent);
+        if (d.min_x < e_domain[0]) e_domain[0] = d.min_x;
+        if (d.max_x > e_domain[1]) e_domain[1] = d.max_x;
+        if (d.min_y < e_range[0]) e_range[0] = d.min_y;
+        if (d.max_y > e_range[1]) e_range[1] = d.max_y;
     });
     var domain_is_datetime = e_domain[0].constructor == Date;
     var range_is_datetime = e_range[0].constructor == Date;
-    e_domain = d3.extent(e_domain);
-    e_range = d3.extent(e_range);
     var chartspaceX = this.width;
     if (this.data.length > 1) {
         this.makeLegend(this.data.map(function(d) { return d.key; }));
@@ -385,8 +382,8 @@ IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecew
         var use_count = this.use_count;
         data = data.map(function (d, i) {
             var new_obj = {key: d.key, range: d.range.slice()};
-            new_obj.range.splice(0, 0, {key: d.key, x: e_domain[0], y: d.minY});
-            new_obj.range.push({key: d.key, x: e_domain[1], y: d.maxY});
+            new_obj.range.splice(0, 0, {key: d.key, x: e_domain[0], y: d.min_y});
+            new_obj.range.push({key: d.key, x: e_domain[1], y: d.max_y});
             if (use_count)
                 new_obj.range[0].y = 0;
             return new_obj;
@@ -507,9 +504,13 @@ IGraphs.Histogram.prototype.aggregateBy = function(x_intervals) {
     this.data = this.data.map(function (d, i) {
         d.intervals = x_intervals.map(function (d) { return 0; });
         var interval = 0;
+        d.max_interval = 0;
         for (var i = 0; i < d.range.length; i++) {
-            if (d.range[i].x > x_intervals[interval][1])
+            if (d.range[i].x > x_intervals[interval][1]) {
+                if (d.intervals[interval] > d.max_interval)
+                    d.max_interval = d.intervals[interval];
                 interval++;
+            }
             d.intervals[interval]++;
         }
         return d;
@@ -525,8 +526,8 @@ IGraphs.Histogram.prototype.draw = function() {
             + "," + ((this.height - bbox.height) / 2) + ")");
         chartspaceX = this.width - bbox.width - 16;
     }
-    var min_x = d3.min(this.data, function(d) { return d.range[0].x; });
-    var max_x = d3.max(this.data, function(d) { return d.range[d.range.length - 1].x; });
+    var min_x = d3.min(this.data, function(d) { return d.min_x; });
+    var max_x = d3.max(this.data, function(d) { return d.max_x; });
     var fractX = 0.8;
     var fractY = 0.7;
     var offset_fractX = (1 - fractX) / 2.0;
@@ -551,7 +552,7 @@ IGraphs.Histogram.prototype.draw = function() {
         x_intervals.push([x_intervals[x_intervals.length - 1][1], max_x]);
     
     this.aggregateBy(x_intervals);
-    var max_y = d3.max(this.data, function(d) { return d3.max(d.intervals); });
+    var max_y = d3.max(this.data, function(d) { return d.max_interval; });
     var y = d3.scale.linear().domain([0, max_y]).range([0, fractY * this.height]);
     var y_reverse = d3.scale.linear().domain([0, max_y]).range([fractY * this.height, 0]);
     var interval_length = fractX * chartspaceX / x_intervals.length;
