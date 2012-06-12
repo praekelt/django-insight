@@ -77,6 +77,11 @@ IGraphs.Graph.prototype = {
             [key_column_index, value_column_index], 
             ['key', 'value']
         );
+        this.data.sort(function (a, b) {
+            if (a.key < b.key) return -1;
+            else if (a.key > b.key) return 1;
+            else return 0;
+        });
     },
     selectTableData: function(table_id, column_indices, column_names, filters) {
         if (!filters)
@@ -329,6 +334,11 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
     }
     this.use_count = use_count;
     this.data = data;
+    this.data.sort(function (a, b) {
+        if (a.key < b.key) return -1;
+        else if (a.key > b.key) return 1;
+        else return 0;
+    });
 };
 
 /* connected = true to draw a linechart
@@ -615,5 +625,4 @@ IGraphs.Histogram.prototype.draw = function() {
             .attr("transform", function (d, i) { 
                 return "translate(" + (i * interval_length) + ", " + (fractY * height - y(d)) + ")";
             });
-     console.log(this.data);
 };
