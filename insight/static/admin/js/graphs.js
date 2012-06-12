@@ -4,7 +4,7 @@ var IGraphs = IGraphs || {}; // namespace for Insight Graphs
 IGraphs.init = function() {
     if (!IGraphs.has_called_init) {
         IGraphs.container = d3.select("#graphs");
-        IGraphs.gmt = new RegExp("([a-zA-Z]{3,9}) (\\d{1,2}), (\\d{4}), (\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.");
+        IGraphs.gmt = new RegExp("([a-zA-Z]{3,9})\\.? (\\d{1,2}), (\\d{4}), (((\\d{1,2})(:(\\d{1,2}))? ([ap]{1})\\.m\\.)|(midnight)|(noon))");
         IGraphs.hex_colour = new RegExp("^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$");
         IGraphs.has_called_init = true;
     }
@@ -27,6 +27,9 @@ IGraphs.Graph = function(title, width, height) {
     this.title = title;
     this.width = width;
     this.height = height;
+    // sometimes different to width and height to make room for legend, etc.
+    this.chart_width = width;
+    this.chart_height = height;
     if (IGraphs.container) {
         this.chart = IGraphs.container.append("div")
             .append("svg:svg")
@@ -70,6 +73,10 @@ IGraphs.Graph.prototype = {
             .attr("x", 24)
             .attr("dy", "1em")
             .text(String);
+        var bbox = this.legend[0][0].getBBox();
+        this.legend.attr("transform", "translate(" + (this.width - bbox.width - 16) 
+            + "," + ((this.height - bbox.height) / 2) + ")");
+        this.chart_width = this.width - bbox.width - 16;
     },
     selectKeyValue: function(table_id, key_column_index, value_column_index) {
         this.data = this.selectTableData(
@@ -77,6 +84,7 @@ IGraphs.Graph.prototype = {
             [key_column_index, value_column_index], 
             ['key', 'value']
         );
+        this.data.sort(function (a, b) { return a.key.localeCompare(b.key); });
     },
     selectTableData: function(table_id, column_indices, column_names, filters) {
         if (!filters)
@@ -271,6 +279,8 @@ IGraphs.XYChart = function(title, width, height, domain_name, range_name) {
         this.ranges = this.chart.append("svg:g")
             .attr("class", "ranges");
     }
+    this.width_fract = 0.8;
+    this.height_fract = 0.7;
 };
 
 IGraphs.XYChart.prototype = new IGraphs.Graph();
@@ -284,9 +294,15 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
         var new_val = parseFloat(val);
         if (!new_val) {
             m = IGraphs.gmt.exec(val);
-            new_val = new Date(m[1] + " " + m[2] + ", " + m[3] + " "
-                + (m[7] == 'a' || m[4] == '12' ? m[4] : parseInt(m[4]) + 12) + ":"
-                + (m[6] ? m[6] : "00") + ":00");
+            new_val = m[1] + " " + m[2] + ", " + m[3] + " ";
+            if (m[4] == "midnight")
+                new_val += "00:00:00";
+            else if (m[4] == "noon")
+                new_val += "12:00:00";
+            else
+                new_val += (m[9] == 'a' || m[6] == '12' ? m[6] : parseInt(m[6]) + 12) 
+                + ":" + (m[8] ? m[8] : "00") + ":00";
+            new_val = new Date(new_val);
         }
         return new_val;
     }
@@ -313,16 +329,86 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
     }
     else
         new_data = {'key':data};
-    // sort data in ascending order on domain
+    // sort data in ascending order on domain and calculate extent
     data = [];
     for (var key in new_data) {
         new_data[key].sort(function(a, b) { return a.x - b.x; });
-        data.push({key: key, range: !use_count ? new_data[key] : new_data[key].map(
-            function(d, i){ d.y = i + 1; return d; })
+        var extent_x = [new_data[key][0].x, new_data[key][new_data[key].length - 1].x];
+        var extent_y = use_count ? [0, new_data[key].length] : d3.extent(new_data[key], function(d) { return d.y; });
+        data.push({key: key, 
+                  range: !use_count ? new_data[key] : new_data[key].map(
+                    function(d, i){ d.y = i + 1; return d; m}),
+                  min_x: extent_x[0],
+                  max_x: extent_x[1],
+                  min_y: extent_y[0],
+                  max_y: extent_y[1]
         });
     }
     this.use_count = use_count;
     this.data = data;
+    this.data.sort(function (a, b) { return a.key.localeCompare(b.key); });
+};
+
+IGraphs.XYChart.prototype.drawDomainAxis = function(scale, is_datetime, rotate_labels) {
+    var ticks = Math.round(this.width_fract * this.chart_width / (50 * 5)) * 5;
+    var domain = this.measure.select(".domain")
+        .attr("transform", "translate(0," + (this.height_fract * this.chart_height + 16) + ")");
+    domain = domain.selectAll("g").data(scale.ticks(ticks))
+        .enter().append("svg:g")
+        .attr("transform", function(d, i) {
+            return "translate(" + scale(d, i) + ",0)";
+        })
+    domain.append("text")
+        .attr("class", "value domain-value" + (is_datetime ? " datetime" : ""))
+        .attr("text-anchor", (rotate_labels ? "end" : "middle"))
+        .attr("transform", "rotate(" + (rotate_labels ? -30 : 0) + ")")
+        .text(is_datetime ? scale.tickFormat(ticks) : String);
+    domain.append("line")
+        .attr("y1", -12)
+        .attr("y2", -20)
+        .style("stroke", "#CCCCCC")
+        .style("stroke-width", 1)
+    if (this.domain_name) { 
+        this.measure.select(".domain").selectAll(".axis-label").data([this.domain_name])
+            .enter().append("text")
+            .attr("class", "label axis-label")
+            .attr("transform", "translate("
+                + this.width_fract * 0.5 * this.chart_width + "," 
+                + ((1 - this.height_fract) * 0.5 * this.chart_height - 20) + ")")
+            .attr("text-anchor", "middle")
+            .text(String);
+    }
+};
+
+IGraphs.XYChart.prototype.drawRangeAxis = function(scale, is_datetime) {
+    var ticks = Math.round(this.height_fract * this.chart_height / (50 * 5)) * 5;
+    var range = this.measure.select(".range");
+    range.selectAll("line").data(scale.ticks(ticks))
+        .enter().append("line")
+        .attr("x2", (this.width_fract * this.chart_width))
+        .attr("y1", scale)
+        .attr("y2", scale)
+        .style("stroke", "#CCCCCC");
+    range.selectAll(".range-value").data(scale.ticks(ticks))
+        .enter().append("text")
+        .attr("class", "value range-value" + (is_datetime ? " datetime" : ""))
+        .attr("x", -4)
+        .attr("y", scale)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", "end")
+        .text(is_datetime ? x.tickFormat(ticks) : String);
+    if (this.range_name) { 
+        range.selectAll(".axis-label").data([this.range_name])
+            .enter().append("svg:g")
+            .attr("class", "label axis-label")
+            .attr("transform", "translate(" 
+                + ((1 - this.height_fract) * -0.5 * this.chart_height + 20) + "," 
+                + (this.height_fract * 0.5 * this.chart_height) + ")")
+                .append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .text(String);
+    }
 };
 
 /* connected = true to draw a linechart
@@ -330,55 +416,37 @@ IGraphs.XYChart.prototype.updateData = function(table_id, domain_column_index, u
  * piecewise = true to draw a step function
  * smooth = true to interpolate between data points (ignored if piecewise = true) */
 IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecewise, smooth) {
-    var e_domain = [];
-    var e_range = this.use_count ? [0] : [];
+    var e_domain = [Number.MAX_VALUE, Number.MIN_VALUE];
+    var e_range = [Number.MAX_VALUE, Number.MIN_VALUE];
     this.data.map(function (d, i) {
-        var extent = d3.extent(d.range, function (d, i) {
-            return d.x;
-        });
-        d.minX = extent[0];
-        d.maxX = extent[1];
-        e_domain.push.apply(e_domain, extent);
-        extent = d3.extent(d.range, function (d, i) {
-            return d.y;
-        });
-        d.minY = extent[0];
-        d.maxY = extent[1];
-        e_range.push.apply(e_range, extent);
+        if (d.min_x < e_domain[0]) e_domain[0] = d.min_x;
+        if (d.max_x > e_domain[1]) e_domain[1] = d.max_x;
+        if (d.min_y < e_range[0]) e_range[0] = d.min_y;
+        if (d.max_y > e_range[1]) e_range[1] = d.max_y;
     });
     var domain_is_datetime = e_domain[0].constructor == Date;
     var range_is_datetime = e_range[0].constructor == Date;
-    e_domain = d3.extent(e_domain);
-    e_range = d3.extent(e_range);
-    var chartspaceX = this.width;
-    if (this.data.length > 1) {
+    if (this.data.length > 1) 
         this.makeLegend(this.data.map(function(d) { return d.key; }));
-        var bbox = this.legend[0][0].getBBox();
-        this.legend.attr("transform", "translate(" + (this.width - bbox.width - 16) 
-            + "," + ((this.height - bbox.height) / 2) + ")");
-        chartspaceX = this.width - bbox.width - 16;
-    }
-    var fractX = 0.8;
-    var fractY = 0.7;
     if (domain_is_datetime)
-        var x = d3.time.scale().domain(e_domain).range([0, fractX * chartspaceX]);
+        var x = d3.time.scale().domain(e_domain).range([0, this.width_fract * this.chart_width]);
     else
-        var x  = d3.scale.linear().domain(e_domain).range([0, fractX * chartspaceX]);
+        var x  = d3.scale.linear().domain(e_domain).range([0, this.width_fract * this.chart_width]);
     if (range_is_datetime)
-        var y = d3.time.scale().domain(e_range).range([fractY * this.height, 0]);
+        var y = d3.time.scale().domain(e_range).range([this.height_fract * this.chart_height, 0]);
     else
-        var y  = d3.scale.linear().domain(e_range).range([fractY * this.height, 0]);
-    var offset_fractX = (1 - fractX) / 2.0;
-    var offset_fractY = (1 - fractY) / 2.0;
-    this.ranges.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
+        var y  = d3.scale.linear().domain(e_range).range([this.height_fract * this.chart_height, 0]);
+    var offset_fractX = (1 - this.width_fract) / 2.0;
+    var offset_fractY = (1 - this.height_fract) / 2.0;
+    this.ranges.attr("transform", "translate(" + offset_fractX * this.chart_width + "," + offset_fractY * this.chart_height + ")");
     var data = this.data;
     if (stretch_over_domain)
     {
         var use_count = this.use_count;
         data = data.map(function (d, i) {
             var new_obj = {key: d.key, range: d.range.slice()};
-            new_obj.range.splice(0, 0, {key: d.key, x: e_domain[0], y: d.minY});
-            new_obj.range.push({key: d.key, x: e_domain[1], y: d.maxY});
+            new_obj.range.splice(0, 0, {key: d.key, x: e_domain[0], y: d.min_y});
+            new_obj.range.push({key: d.key, x: e_domain[1], y: d.max_y});
             if (use_count)
                 new_obj.range[0].y = 0;
             return new_obj;
@@ -397,7 +465,7 @@ IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecew
             .style("fill", "none");
     }
     else {
-        var radius = Math.floor(fractY * this.height / (e_range[1] - e_range[0]) * 0.5);
+        var radius = Math.min(Math.floor(this.height_fract * this.chart_height / (e_range[1] - e_range[0]) * 0.5), 6);
         var ranges = this.ranges.selectAll(".range").data(data);
         ranges.enter().append("svg:g")
             .attr("class", "range")
@@ -408,60 +476,10 @@ IGraphs.XYChart.prototype.draw = function(connected, stretch_over_domain, piecew
                 .attr("r", radius)
                 .style("fill", function(d, i) { return IGraphs.hexToRGBA(IGraphs.getColour(d.key), 0.7); });
     }
-    this.measure.attr("transform", "translate(" + offset_fractX * chartspaceX + "," + offset_fractY * this.height + ")");
-    var ticks = Math.round(fractY * this.height / (50 * 5)) * 5;
-    y.range([fractY * this.height,0]);
-    var m_range = this.measure.select(".range");
-    m_range.selectAll("line").data(y.ticks(ticks))
-        .enter().append("line")
-        .attr("x2", (offset_fractX + fractX * chartspaceX))
-        .attr("y1", y)
-        .attr("y2", y)
-        .style("stroke", "#CCCCCC");
-    m_range.selectAll(".range-value").data(y.ticks(ticks))
-        .enter().append("text")
-        .attr("class", "value range-value" + (range_is_datetime ? " datetime" : ""))
-        .attr("x", -4)
-        .attr("y", y)
-        .attr("dy", "0.35em")
-        .attr("text-anchor", "end")
-        .text(range_is_datetime ? x.tickFormat(ticks) : String);
-    if (this.range_name) { 
-        m_range.selectAll(".axis-label").data([this.range_name])
-            .enter().append("svg:g")
-            .attr("class", "label axis-label")
-            .attr("transform", "translate(" + (-offset_fractY * this.height + 20) + "," + (fractY * 0.5 * this.height) + ")")
-                .append("text")
-                .attr("text-anchor", "middle")
-                .attr("transform", "rotate(-90)")
-                .text(String);
-    }
-    ticks = Math.round(fractX * chartspaceX / (50 * 5)) * 5;
-    var domain_group = this.measure.select(".domain")
-        .attr("transform", "translate(0," + (fractY * this.height + 16) + ")");
-    domain_group = domain_group.selectAll("g").data(x.ticks(ticks))
-        .enter().append("svg:g")
-        .attr("transform", function(d, i) {
-            return "translate(" + x(d) + ",0)";
-        })
-    domain_group.append("text")
-        .attr("class", "value domain-value" + (domain_is_datetime ? " datetime" : ""))
-        .attr("text-anchor", "end")
-        .attr("transform", "rotate(-30)")
-        .text(domain_is_datetime ? x.tickFormat(ticks) : String);
-    domain_group.append("line")
-        .attr("y1", -12)
-        .attr("y2", -20)
-        .style("stroke", "#CCCCCC")
-        .style("stroke-width", 1)
-    if (this.domain_name) { 
-        this.measure.select(".domain").selectAll(".axis-label").data([this.domain_name])
-            .enter().append("text")
-            .attr("class", "label axis-label")
-            .attr("transform", "translate(" + (0.5 - offset_fractX) * chartspaceX + "," + (offset_fractY * this.height - 20) + ")")
-            .attr("text-anchor", "middle")
-            .text(String);
-    }
+    
+    this.measure.attr("transform", "translate(" + offset_fractX * this.chart_width + "," + offset_fractY * this.chart_height + ")");
+    this.drawRangeAxis(y, range_is_datetime);
+    this.drawDomainAxis(x, domain_is_datetime, true);
 };
 
 /*
@@ -478,4 +496,107 @@ IGraphs.LineChart.prototype.supr = IGraphs.XYChart.prototype;
 // piecewise = true to draw a step function, smooth = true to interpolate between data points (ignored if piecewise = true)
 IGraphs.LineChart.prototype.draw = function(stretch_over_domain, piecewise, smooth) {
     this.supr.draw.call(this, true, stretch_over_domain, piecewise, smooth);
+};
+
+/*
+ * Histogram object
+ */
+IGraphs.Histogram = function(title, width, height, domain_name) {
+    IGraphs.XYChart.call(this, title, width, height, domain_name, "Amount");
+};
+
+IGraphs.Histogram.prototype = new IGraphs.XYChart();
+IGraphs.Histogram.prototype.constructor = IGraphs.Histogram;
+IGraphs.Histogram.prototype.supr = IGraphs.XYChart.prototype;
+
+IGraphs.Histogram.prototype.updateData = function(table_id, domain_column_index, key_column_index) {
+    this.supr.updateData.call(this, table_id, domain_column_index, true, key_column_index);
+};
+
+IGraphs.Histogram.prototype.aggregateBy = function(x_intervals) {
+    this.data = this.data.map(function (d, i) {
+        d.intervals = x_intervals.map(function (d) { return 0; });
+        var interval = 0;
+        d.max_interval = 0;
+        for (var i = 0; i < d.range.length; i++) {
+            if (d.range[i].x > x_intervals[interval][1]) {
+                if (d.intervals[interval] > d.max_interval)
+                    d.max_interval = d.intervals[interval];
+                interval++;
+            }
+            d.intervals[interval]++;
+        }
+        return d;
+    });
+};
+
+IGraphs.Histogram.prototype.draw = function() {
+    if (this.data.length > 1)
+        this.makeLegend(this.data.map(function(d) { return d.key; }));
+    var min_x = d3.min(this.data, function(d) { return d.min_x; });
+    var max_x = d3.max(this.data, function(d) { return d.max_x; });
+    
+    var offset_fractX = (1 - this.width_fract) / 2.0;
+    var offset_fractY = (1 - this.height_fract) / 2.0;
+    
+    var domain_is_datetime = max_x.constructor == Date;
+    if (domain_is_datetime) {
+        min_x.setSeconds(1); min_x.setMinutes(0); min_x.setHours(0);
+        max_x.setSeconds(59); max_x.setMinutes(59); max_x.setHours(23);
+        if (max_x.getTime() - min_x.getTime() > 2592000000 * 1.2) {
+            min_x.setDate(1); 
+            max_x.setDate(new Date(max_x.getYear(), max_x.getMonth() + 1, 0).getDate()); // hacky but works for now
+        }
+        var x = d3.time.scale().domain([min_x, max_x]).range([0, this.width_fract * this.chart_width]);
+    }
+    else
+        var x = d3.scale.linear().domain([min_x, max_x]).range([0, this.width_fract * this.chart_width]);
+    var ticks = domain_is_datetime ? (max_x.getTime() - min_x.getTime() > 2592000000 * 1.2 ? d3.time.months : d3.time.weeks)
+        : Math.round(this.width_fract * this.chart_width / (50 * 5)) * 5 / 2.0; // half as dense as a normal XYChart
+    var x_intervals = x.ticks(ticks);
+    x_intervals = x_intervals.map(function(d, i) {
+        if (i == 0)
+            return [min_x, d];
+        else
+            return [x_intervals[i-1], d];
+    });
+    if (x_intervals[x_intervals.length - 1][1] < max_x)
+        x_intervals.push([x_intervals[x_intervals.length - 1][1], max_x]);
+    
+    this.aggregateBy(x_intervals);
+    var max_y = d3.max(this.data, function(d) { return d.max_interval; });
+    var y = d3.scale.linear().domain([0, max_y]).range([0, this.height_fract * this.chart_height]);
+    var y_reverse = d3.scale.linear().domain([0, max_y]).range([this.height_fract * this.chart_height, 0]);
+    var interval_length = this.width_fract * this.chart_width / x_intervals.length;
+    var tick_format = domain_is_datetime ? 
+        (ticks == d3.time.months ? function(d) { return d[0].toDateString().substr(4, 3); }
+            : function(d) { return d[0].toDateString().substr(4, 6) + " - " + d[1].toDateString().substr(8, 2); })
+        : function(d) { return d[0] + " - " + d[1]; };
+    
+    // define custom scale function that behaves like d3.scale
+    function scale(d, i) { return (interval_length * i + interval_length * 0.5); }
+    scale.ticks = function (){ return x_intervals; };
+    scale.tickFormat = function (){ return tick_format; };
+    
+    this.measure.attr("transform", "translate(" + offset_fractX * this.chart_width + "," + offset_fractY * this.chart_height + ")");
+    this.drawDomainAxis(scale, domain_is_datetime);
+    this.drawRangeAxis(y_reverse, false);
+    
+    var bar_width = interval_length / (this.data.length + 2); // 2 bar space between intervals
+    var height = this.chart_height;
+    var fract = this.height_fract;
+    this.chart.select(".ranges")
+        .attr("transform", "translate(" + (offset_fractX * this.chart_width + bar_width) + "," + (offset_fractY * this.chart_height) + ")")
+        .selectAll("g").data(this.data)
+        .enter().append("svg:g").attr("class", "range")
+        .attr("transform", function(d, i) {
+            return "translate(" + (i * bar_width) + ",0)"; })
+        .style("fill", function (d) { return IGraphs.getColour(d.key); })
+        .selectAll("rect").data(function(d, i) { return d.intervals; })
+        .enter().append("svg:rect")
+            .attr("width", bar_width)
+            .attr("height", function(d) { return y(d) == 0 ? 1 : y(d); })
+            .attr("transform", function (d, i) { 
+                return "translate(" + (i * interval_length) + ", " + (fract * height - (y(d) == 0 ? 1 : y(d))) + ")"
+            });
 };

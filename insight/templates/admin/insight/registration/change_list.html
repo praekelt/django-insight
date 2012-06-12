@@ -7,12 +7,15 @@
     <script type="text/javascript">
         window.addEventListener("load", function(){
             IGraphs.init(); // can be called multiple times on a page without effect
-            var linechart1 = new IGraphs.LineChart("All recent registrations", 600, 400);
+            var linechart1 = new IGraphs.LineChart("Registration growth", 600, 400);
             linechart1.updateData("result_list", 3, true);
             linechart1.draw(true, false, true);
-            var linechart2 = new IGraphs.XYChart("Recent registrations by origin", 600, 400, "","");
+            var linechart2 = new IGraphs.XYChart("Registration growth by origin", 600, 400, "","");
             linechart2.updateData("result_list", 3, true, 2);
             linechart2.draw();
+            var histogram = new IGraphs.Histogram("Registrations by time period", 600, 400, "Time period");
+            histogram.updateData("result_list", 3, 2);
+            histogram.draw();
         }, false);
     </script>
 {% endblock %}
