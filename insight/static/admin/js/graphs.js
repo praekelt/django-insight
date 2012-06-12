@@ -378,7 +378,7 @@ IGraphs.XYChart.prototype.drawDomainAxis = function(scale, is_datetime, rotate_l
             .attr("text-anchor", "middle")
             .text(String);
     }
-}
+};
 
 IGraphs.XYChart.prototype.drawRangeAxis = function(scale, is_datetime) {
     var ticks = Math.round(this.height_fract * this.chart_height / (50 * 5)) * 5;
@@ -409,7 +409,7 @@ IGraphs.XYChart.prototype.drawRangeAxis = function(scale, is_datetime) {
                 .attr("transform", "rotate(-90)")
                 .text(String);
     }
-}
+};
 
 /* connected = true to draw a linechart
  * stretch_over_domain = true to duplicate endpoints to fill the domain
@@ -528,7 +528,7 @@ IGraphs.Histogram.prototype.aggregateBy = function(x_intervals) {
         }
         return d;
     });
-}
+};
 
 IGraphs.Histogram.prototype.draw = function() {
     if (this.data.length > 1)
@@ -541,13 +541,17 @@ IGraphs.Histogram.prototype.draw = function() {
     
     var domain_is_datetime = max_x.constructor == Date;
     if (domain_is_datetime) {
-        min_x.setSeconds(0); min_x.setMinutes(0); min_x.setHours(0);
+        min_x.setSeconds(1); min_x.setMinutes(0); min_x.setHours(0);
         max_x.setSeconds(59); max_x.setMinutes(59); max_x.setHours(23);
+        if (max_x.getTime() - min_x.getTime() > 2592000000 * 1.2) {
+            min_x.setDate(1); 
+            max_x.setDate(new Date(max_x.getYear(), max_x.getMonth() + 1, 0).getDate()); // hacky but works for now
+        }
         var x = d3.time.scale().domain([min_x, max_x]).range([0, this.width_fract * this.chart_width]);
     }
     else
         var x = d3.scale.linear().domain([min_x, max_x]).range([0, this.width_fract * this.chart_width]);
-    var ticks = domain_is_datetime ? (max_x.getTime() - min_x.getTime() > 2592000000 * 1.5 ? d3.time.months : d3.time.weeks)
+    var ticks = domain_is_datetime ? (max_x.getTime() - min_x.getTime() > 2592000000 * 1.2 ? d3.time.months : d3.time.weeks)
         : Math.round(this.width_fract * this.chart_width / (50 * 5)) * 5 / 2.0; // half as dense as a normal XYChart
     var x_intervals = x.ticks(ticks);
     x_intervals = x_intervals.map(function(d, i) {
@@ -565,7 +569,8 @@ IGraphs.Histogram.prototype.draw = function() {
     var y_reverse = d3.scale.linear().domain([0, max_y]).range([this.height_fract * this.chart_height, 0]);
     var interval_length = this.width_fract * this.chart_width / x_intervals.length;
     var tick_format = domain_is_datetime ? 
-        function(d) { return d[0].toDateString().substr(4, 6) + " - " + d[1].toDateString().substr(4, 6); } 
+        (ticks == d3.time.months ? function(d) { return d[0].toDateString().substr(4, 3); }
+            : function(d) { return d[0].toDateString().substr(4, 6) + " - " + d[1].toDateString().substr(8, 2); })
         : function(d) { return d[0] + " - " + d[1]; };
     
     // define custom scale function that behaves like d3.scale
@@ -592,6 +597,6 @@ IGraphs.Histogram.prototype.draw = function() {
             .attr("width", bar_width)
             .attr("height", y)
             .attr("transform", function (d, i) { 
-                return "translate(" + (i * interval_length) + ", " + (fract * height - y(d)) + ")";
+                return "translate(" + (i * interval_length) + ", " + (fract * height - y(d)) + ")"
             });
 };
