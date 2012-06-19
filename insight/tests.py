@@ -8,6 +8,7 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 from django.contrib.sites.models import Site
 
+from insight.models import Origin, Registration
 
 class InsightTestCase(TestCase):
 
@@ -18,4 +19,14 @@ class InsightTestCase(TestCase):
             self.username, 'user@host.com', self.password
         )
         self.client = Client()
-        self.client.login(username=self.username, password=self.password)
+
+    def create_origin(self):
+        origin = Origin(title='test_origin')
+        origin.save()
+        return origin
+
+    def test_cookie_is_set(self):
+        origin = self.create_origin()
+        self.client.get(origin.url)
+        self.assertTrue(self.client.cookies.has_key("insight_code"))
+        
