@@ -10,6 +10,7 @@ from django.contrib.sites.models import Site
 
 from insight.models import Origin, Registration
 
+
 class InsightTestCase(TestCase):
 
     def setUp(self):
@@ -28,5 +29,4 @@ class InsightTestCase(TestCase):
     def test_cookie_is_set(self):
         origin = self.create_origin()
         self.client.get(origin.url)
-        self.assertTrue(self.client.cookies.has_key("insight_code"))
-        
+        self.assertTrue("insight_code" in self.client.cookies)

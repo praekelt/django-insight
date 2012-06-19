@@ -46,6 +46,6 @@ class Registration(models.Model):
         super(Registration, self).save(*args, **kwargs)
         self.origin.number_of_registrations = F('number_of_registrations') + 1
         self.origin.save()
-    
+
     def __unicode__(self):
         return str(self.id)

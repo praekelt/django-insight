@@ -8,10 +8,11 @@ from insight.models import Registration, Origin
 
 '''Requires Django's AuthenticationMiddleware'''
 class RegistrationOriginMiddleware(object):
+
     TRACK_URL = '/join/'  # foundry join form url
     TRACK_REGEX = re.compile('^' + re.escape(TRACK_URL) + '$')
     INCOMING_REGEX = re.compile(r'^/(?P<prefix>[a-z])/(?P<code>[\w]+)/$')
-    
+
     def process_request(self, request):
         match = self.INCOMING_REGEX.match(request.path)
         if match:
@@ -30,28 +31,28 @@ class RegistrationOriginMiddleware(object):
                     'expires': expires,
                     #'domain': request.META['HTTP_HOST'],
                     'path': self.TRACK_URL,
-                    'secure': request.is_secure() or None, 
-                } 
+                    'secure': request.is_secure() or None,
+                }
                 response.set_cookie(**cookie_args)
             return response
         else:
             return None
-
 
     def process_response(self, request, response):
         if request.method == 'POST' and self.TRACK_REGEX.match(request.path):
             if request.user.is_authenticated():
                 # record new registration with its origin identified by code
                 new_registration = Registration(
-                    user = request.user,
-                    origin = Origin.objects.get(
-                        code=request.COOKIES['insight_code'])
+                    user=request.user,
+                    origin=Origin.objects.get(
+                        code=request.COOKIES['insight_code']
+                    )
                 )
                 new_registration.save()
                 # remove cookie
                 response.delete_cookie(
-                    'insight_code', 
-                    self.TRACK_URL, 
+                    'insight_code',
+                    self.TRACK_URL,
                     request.META['HTTP_HOST']
                 )
         return response

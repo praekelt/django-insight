@@ -24,11 +24,11 @@ def generate():
             "fields": {
                 "user": {
                     "model": "auth.User",
-                    "fields": {"username": "user_%s" % i,}
+                    "fields": {"username": "user_%s" % i}
                 },
                 "origin": {
                     "model": "insight.Origin",
-                    "fields": {"title": "origin_%s" % random.randint(1,5),}
+                    "fields": {"title": "origin_%s" % random.randint(1, 5)}
                 }
             },
         })

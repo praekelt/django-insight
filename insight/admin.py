@@ -10,7 +10,7 @@ class OriginAdmin(admin.ModelAdmin):
     list_display = ('title', 'description', 'url', 'number_of_registrations')
 
     def url(self, origin):
-      return '<a href="%s">%s</a>' % (origin.url, origin.url)
+        return '<a href="%s">%s</a>' % (origin.url, origin.url)
     url.allow_tags = True
 
 
@@ -30,7 +30,7 @@ class RegistrationAdmin(admin.ModelAdmin):
             reg_obj.user
         )
     user_link.allow_tags = True
-        
+
     def origin_link(self, reg_obj):
         return '<a href="%s">%s</a>' % (
             '/admin/insight/origin/' + str(reg_obj.origin_id),
