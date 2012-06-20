@@ -68,5 +68,3 @@ def record_registration(sender, **kwargs):
         except IntegrityError:
             pass
         del request.session['insight_code']
-    
-    
