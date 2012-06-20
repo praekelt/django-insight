@@ -8,6 +8,6 @@ urlpatterns = patterns('',
     url(
         r'^(?P<prefix>[a-z])/(?P<code>[\w]+)/$',
         set_origin_code,
-        name='set-origin-cookie'
+        name='set-origin-code'
     ),
 )
