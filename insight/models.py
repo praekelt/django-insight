@@ -1,7 +1,9 @@
 import uuid
 
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, IntegrityError
 from django.db.models import F
 
 
@@ -35,7 +37,7 @@ class Origin(models.Model):
 
 
 class Registration(models.Model):
-    user = models.ForeignKey(User, editable=False)
+    user = models.ForeignKey(User, editable=False, unique=True)
     origin = models.ForeignKey(Origin, editable=False)
     created = models.DateTimeField(auto_now_add=True)
 
@@ -46,6 +48,23 @@ class Registration(models.Model):
         super(Registration, self).save(*args, **kwargs)
         self.origin.number_of_registrations = F('number_of_registrations') + 1
         self.origin.save()
-    
+
     def __unicode__(self):
         return str(self.id)
+
+
+@receiver(user_logged_in)
+def record_registration(sender, **kwargs):
+    request = kwargs['request']
+    if 'insight_code' in request.session:
+        try:
+            registration = Registration(
+                user=kwargs['user'],
+                origin=Origin.objects.get(
+                    code=request.session['insight_code']
+                )
+            )
+            registration.save()
+        except IntegrityError:
+            pass
+        del request.session['insight_code']
