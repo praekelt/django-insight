@@ -16,9 +16,6 @@ class InsightTestCase(TestCase):
     def setUp(self):
         self.username = 'username'
         self.password = 'password'
-        self.user = User.objects.create_user(
-            self.username, 'user@host.com', self.password
-        )
         self.client = Client()
 
     def create_origin(self):
@@ -26,7 +23,11 @@ class InsightTestCase(TestCase):
         origin.save()
         return origin
 
-    def test_cookie_is_set(self):
+    def test_registration_is_recorded(self):
         origin = self.create_origin()
         self.client.get(origin.url)
-        self.assertTrue("insight_code" in self.client.cookies)
+        self.user = User.objects.create_user(
+            self.username, 'user@host.com', self.password
+        )
+        self.client.login(username=self.username, password=self.password)
+        self.assertTrue(Registration.objects.filter(user=self.user).exists())
