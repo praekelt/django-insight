@@ -78,7 +78,7 @@ IGraphs.Graph.prototype = {
             + "," + ((this.height - bbox.height) / 2) + ")");
         this.chart_width = this.width - bbox.width - 16;
     },
-    selectKeyValue: function(table_id, key_column_index, value_column_index) {
+    selectKeyValue: function(table_id, key_column_index, value_column_index, aggregate_by_key) {
         this.data = this.selectTableData(
             table_id, 
             [key_column_index, value_column_index], 
@@ -86,6 +86,23 @@ IGraphs.Graph.prototype = {
             {value: parseFloat}
         );
         this.data.sort(function (a, b) { return a.key.localeCompare(b.key); });
+        if (aggregate_by_key)
+            this.aggregateBy('key', 'value');
+    },
+    aggregateBy: function(key, value) {
+        var last_key = "";
+        var last_object = undefined;
+        var data = [];
+        for (var i = 0; i < this.data.length; i++) {
+            d = this.data[i];
+            if (d[key] != last_key) {
+                last_key = d[key];
+                last_object = d;
+                data.push(last_object);
+            }
+            else last_object[value] += d[value];
+        }
+        this.data = data;
     },
     selectTableData: function(table_id, column_indices, column_names, filters) {
         if (!filters)
@@ -129,8 +146,8 @@ IGraphs.PieChart.prototype = new IGraphs.Graph();
 IGraphs.PieChart.prototype.constructor = IGraphs.PieChart;
 IGraphs.PieChart.prototype.supr = IGraphs.Graph.prototype;
 
-IGraphs.PieChart.prototype.updateData = function(table_id, key_column_index, value_column_index) {
-    this.selectKeyValue(table_id, key_column_index, value_column_index);
+IGraphs.PieChart.prototype.updateData = function(table_id, key_column_index, value_column_index, aggregate_by_key) {
+    this.selectKeyValue(table_id, key_column_index, value_column_index, aggregate_by_key);
 };
 
 IGraphs.PieChart.prototype.draw = function() {
@@ -199,8 +216,8 @@ IGraphs.BarChart.prototype = new IGraphs.Graph();
 IGraphs.BarChart.prototype.constructor = IGraphs.BarChart;
 IGraphs.BarChart.prototype.supr = IGraphs.Graph.prototype;
 
-IGraphs.BarChart.prototype.updateData = function(table_id, key_column_index, value_column_index) {
-    this.selectKeyValue(table_id, key_column_index, value_column_index);
+IGraphs.BarChart.prototype.updateData = function(table_id, key_column_index, value_column_index, aggregate_by_key) {
+    this.selectKeyValue(table_id, key_column_index, value_column_index, aggregate_by_key);
     this.column_width = 0.66 * this.width / this.data.length;
 };
 
