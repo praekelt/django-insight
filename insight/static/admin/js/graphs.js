@@ -82,7 +82,8 @@ IGraphs.Graph.prototype = {
         this.data = this.selectTableData(
             table_id, 
             [key_column_index, value_column_index], 
-            ['key', 'value']
+            ['key', 'value'], 
+            {value: parseFloat}
         );
         this.data.sort(function (a, b) { return a.key.localeCompare(b.key); });
     },
