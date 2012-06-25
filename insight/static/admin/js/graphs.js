@@ -194,7 +194,11 @@ IGraphs.PieChart.prototype.draw = function() {
             .attr("dy", "1.5em")
             .attr("text-anchor", alignText)
             .attr("transform", calcOffset)
-            .text(function(d, i) { return (d.data.value * 100.0 / total + "%"); });
+            .text(function(d, i) { 
+                var perc = d.data.value * 100.0 / total;
+                perc = Math.round(perc * 10.0)/10.0;
+                return perc + "%"; 
+            });
         slices.exit().remove();
     }
 };
