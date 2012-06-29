@@ -25,4 +25,6 @@ Requirements
     - `django.contrib.auth.middleware.AuthenticationMiddleware`
     - `django.contrib.sessions.middleware.SessionMiddleware`
 - South
-- .. _django-generate: https://github.com/praekelt/django-generate (optional - used to generate test data)
+- django-generate_ (optional - used to generate test data)
+
+.. _django-generate: https://github.com/praekelt/django-generate
