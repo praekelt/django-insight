@@ -20,7 +20,7 @@ class OriginGroup(models.Model):
 class Origin(models.Model):
     title = models.CharField(max_length=50)
     description = models.TextField(blank=True, null=True)
-    code = models.CharField(primary_key=True, max_length=7, blank=True, \
+    code = models.CharField(db_index=True, unique=True, max_length=7, blank=True, \
         help_text="The code that uniquely identifies this origin. Leave blank to have it automatically generated.")
     querystring_parameters = models.TextField(null=True, blank=True, \
         help_text="A list of querystring parameters that need to be tracked, one per line.")
@@ -30,10 +30,10 @@ class Origin(models.Model):
     class Meta:
         ordering = ['title']
 
-    def __init__(self, *args, **kwargs):
-        super(Origin, self).__init__(*args, **kwargs)
+    def save(self, *args, **kwargs):
         if not self.code:
             self.code = self.generate_code()
+        super(Origin, self).save(*args, **kwargs)
 
     def generate_code(self):
         while True:

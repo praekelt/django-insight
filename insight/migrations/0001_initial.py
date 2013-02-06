@@ -8,15 +8,38 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # Adding model 'OriginGroup'
+        db.create_table('insight_origingroup', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('title', self.gf('django.db.models.fields.CharField')(max_length=50)),
+            ('description', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
+        ))
+        db.send_create_signal('insight', ['OriginGroup'])
+
         # Adding model 'Origin'
         db.create_table('insight_origin', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('title', self.gf('django.db.models.fields.CharField')(max_length=50)),
             ('description', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
-            ('code', self.gf('django.db.models.fields.CharField')(unique=True, max_length=7)),
+            ('code', self.gf('django.db.models.fields.CharField')(db_index=True, unique=True, max_length=7, blank=True)),
+            ('querystring_parameters', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
             ('number_of_registrations', self.gf('django.db.models.fields.IntegerField')(default=0)),
+            ('origin_group', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['insight.OriginGroup'], null=True, blank=True)),
         ))
         db.send_create_signal('insight', ['Origin'])
+
+        # Adding model 'QuerystringParameter'
+        db.create_table('insight_querystringparameter', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('identifier', self.gf('django.db.models.fields.CharField')(max_length=32, db_index=True)),
+            ('value', self.gf('django.db.models.fields.CharField')(max_length=50, db_index=True)),
+            ('origin', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['insight.Origin'])),
+            ('number_of_registrations', self.gf('django.db.models.fields.IntegerField')(default=0)),
+        ))
+        db.send_create_signal('insight', ['QuerystringParameter'])
+
+        # Adding unique constraint on 'QuerystringParameter', fields ['identifier', 'value', 'origin']
+        db.create_unique('insight_querystringparameter', ['identifier', 'value', 'origin_id'])
 
         # Adding model 'Registration'
         db.create_table('insight_registration', (
@@ -29,8 +52,17 @@ class Migration(SchemaMigration):
 
 
     def backwards(self, orm):
+        # Removing unique constraint on 'QuerystringParameter', fields ['identifier', 'value', 'origin']
+        db.delete_unique('insight_querystringparameter', ['identifier', 'value', 'origin_id'])
+
+        # Deleting model 'OriginGroup'
+        db.delete_table('insight_origingroup')
+
         # Deleting model 'Origin'
         db.delete_table('insight_origin')
+
+        # Deleting model 'QuerystringParameter'
+        db.delete_table('insight_querystringparameter')
 
         # Deleting model 'Registration'
         db.delete_table('insight_registration')
@@ -75,11 +107,27 @@ class Migration(SchemaMigration):
         },
         'insight.origin': {
             'Meta': {'ordering': "['title']", 'object_name': 'Origin'},
-            'code': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '7'}),
+            'code': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'unique': 'True', 'max_length': '7', 'blank': 'True'}),
             'description': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'number_of_registrations': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
+            'origin_group': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['insight.OriginGroup']", 'null': 'True', 'blank': 'True'}),
+            'querystring_parameters': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'max_length': '50'})
+        },
+        'insight.origingroup': {
+            'Meta': {'object_name': 'OriginGroup'},
+            'description': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'max_length': '50'})
+        },
+        'insight.querystringparameter': {
+            'Meta': {'unique_together': "(('identifier', 'value', 'origin'),)", 'object_name': 'QuerystringParameter'},
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'identifier': ('django.db.models.fields.CharField', [], {'max_length': '32', 'db_index': 'True'}),
+            'number_of_registrations': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
+            'origin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['insight.Origin']"}),
+            'value': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'})
         },
         'insight.registration': {
             'Meta': {'ordering': "['-created']", 'object_name': 'Registration'},
