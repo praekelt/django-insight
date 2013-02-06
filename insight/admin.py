@@ -16,12 +16,6 @@ class OriginAdmin(admin.ModelAdmin):
 
 class QuerystringParameterAdmin(admin.ModelAdmin):
     list_display = ('origin', 'identifier', 'value', 'number_of_registrations')
-    
-    def has_add_permission(self, *args, **kwargs):
-        return False
-
-    def has_delete_permission(self, *args, **kwargs):
-        return False
 
 
 admin.site.register(Origin, OriginAdmin)
