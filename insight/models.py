@@ -1,6 +1,8 @@
 import uuid
 
+from django.core.urlresolvers import reverse
 from django.contrib.auth.signals import user_logged_in
+from django.contrib.sites.models import Site
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.db import models, IntegrityError
@@ -10,7 +12,7 @@ from django.db.models import F
 class Origin(models.Model):
     title = models.CharField(max_length=50)
     description = models.TextField(blank=True, null=True)
-    code = models.CharField(unique=True, max_length=7, editable=False)
+    code = models.CharField(unique=True, max_length=7, blank=True)
     number_of_registrations = models.IntegerField(editable=False, default=0)
 
     class Meta:
@@ -31,9 +33,9 @@ class Origin(models.Model):
     def __unicode__(self):
         return self.title
 
-    @property
-    def url(self):
-        return '/i/%s/' % self.code
+    def get_absolute_url(self):
+        return "%s%s" % (Site.objects.get_current().domain, \
+            reverse('set-origin-code', kwargs={'code': self.code}))
 
 
 class Registration(models.Model):
@@ -45,9 +47,10 @@ class Registration(models.Model):
         ordering = ['-created']
 
     def save(self, *args, **kwargs):
+        if not self.pk:
+            self.origin.number_of_registrations = F('number_of_registrations') + 1
+            self.origin.save()
         super(Registration, self).save(*args, **kwargs)
-        self.origin.number_of_registrations = F('number_of_registrations') + 1
-        self.origin.save()
 
     def __unicode__(self):
         return str(self.id)

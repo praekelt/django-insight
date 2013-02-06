@@ -14,7 +14,7 @@ setup(
     ],
     include_package_data=True,
     tests_require=[
-        'django-setuptest',
+        'django-setuptest>=0.1.2',
         'coverage',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",

@@ -6,11 +6,12 @@ from insight.models import Origin, Registration
 
 
 class OriginAdmin(admin.ModelAdmin):
-    fields = ('title', 'description')
+    fields = ('title', 'description', 'code')
     list_display = ('title', 'description', 'url', 'number_of_registrations')
 
     def url(self, origin):
-        return '<a href="%s">%s</a>' % (origin.url, origin.url)
+        url = origin.get_absolute_url()
+        return '<a href="%s">%s</a>' % (url, url)
     url.allow_tags = True
 
 
@@ -46,4 +47,4 @@ class RegistrationAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Origin, OriginAdmin)
-admin.site.register(Registration, RegistrationAdmin)
+#admin.site.register(Registration, RegistrationAdmin)
