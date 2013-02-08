@@ -12,6 +12,7 @@ from insight.models import Origin, Registration, QuerystringParameter
 
 
 class InsightTestCase(TestCase):
+    urls = 'insight.test_urls'
 
     def setUp(self):
         self.username = 'username'
@@ -65,3 +66,13 @@ class InsightTestCase(TestCase):
         self.assertFalse(QuerystringParameter.objects.filter(origin=origin, identifier='kid').exists())
         self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='gid', \
             value=444).number_of_registrations==1)
+    
+    def test_redirect(self):
+        origin1 = self.create_origin()
+        origin2 = self.create_origin()
+        origin2.redirect_to = reverse("login")
+        origin2.save()
+        r = self.client.get("/%s" % origin1.get_absolute_url().split("/", 1)[1])
+        self.assertEqual("/%s" % r['Location'].split('/', 3)[3], '/')
+        r = self.client.get("/%s" % origin2.get_absolute_url().split("/", 1)[1])
+        self.assertEqual("/%s" % r['Location'].split('/', 3)[3], reverse("login"))

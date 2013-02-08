@@ -26,6 +26,7 @@ class Origin(models.Model):
         help_text="A list of querystring parameters that need to be tracked, one per line.")
     number_of_registrations = models.IntegerField(editable=False, default=0)
     origin_group = models.ForeignKey(OriginGroup, null=True, blank=True)
+    redirect_to = models.URLField(blank=True, null=True, help_text="The URL that this origin's URL will redirect to.")
 
     class Meta:
         ordering = ['title']

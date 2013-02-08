@@ -104,7 +104,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = 'insight.urls'
+ROOT_URLCONF = 'insight.test_urls'
 
 TEMPLATE_DIRS = (
     abspath("insight", "templates"),
