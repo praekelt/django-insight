@@ -2,7 +2,6 @@ import uuid
 
 from django.core.urlresolvers import reverse
 from django.contrib.auth.signals import user_logged_in
-from django.contrib.sites.models import Site
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.db import models, IntegrityError
@@ -24,6 +23,7 @@ class Origin(models.Model):
         help_text="The code that uniquely identifies this origin. Leave blank to have it automatically generated.")
     querystring_parameters = models.TextField(null=True, blank=True,
         help_text="A list of querystring parameters that need to be tracked, one per line.")
+    track_registrations = models.BooleanField(default=True)
     number_of_registrations = models.IntegerField(editable=False, default=0)
     origin_group = models.ForeignKey(OriginGroup, null=True, blank=True)
     redirect_to = models.URLField(blank=True, null=True, help_text="The URL that this origin's URL will redirect to.")
@@ -47,8 +47,7 @@ class Origin(models.Model):
         return self.title
 
     def get_absolute_url(self):
-        return "%s%s" % (Site.objects.get_current().domain,
-            reverse('set-origin-code', kwargs={'code': self.code}))
+        return reverse('set-origin-code', kwargs={'code': self.code})
 
     @property
     def parameter_list(self):
