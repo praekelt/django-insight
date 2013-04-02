@@ -81,3 +81,24 @@ class InsightTestCase(TestCase):
         origin2.save()
         self.assertRedirects(self.client.get(origin1.get_absolute_url()), '/')
         self.assertRedirects(self.client.get(origin2.get_absolute_url()), reverse('stub'))
+
+    def test_origin_hit_signal(self):
+        origin = self.create_origin()
+        signal_dict = {
+            'instance': None,
+            'request': None,
+            'signal_received': False
+        }
+
+        def signal_handler(sender, **kwargs):
+            signal_dict['signal_received'] = True
+            signal_dict['instance'] = kwargs['instance']
+            signal_dict['request'] = kwargs['request']
+
+        from insight.signals import origin_hit
+        origin_hit.connect(signal_handler, sender=Origin)
+        self.client.get(origin.get_absolute_url())
+
+        self.assertTrue(signal_dict['signal_received'])
+        self.assertEqual(origin, signal_dict['instance'])
+        self.assertEqual(signal_dict['request'].path, origin.get_absolute_url())

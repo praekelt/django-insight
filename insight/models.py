@@ -60,20 +60,21 @@ class Origin(models.Model):
     def track(request, user):
         try:
             origin = Origin.objects.get(code=request.session['insight_code'])
-            try:
-                Registration.objects.create(user=user, origin=origin)
-                origin.number_of_registrations = F('number_of_registrations') + 1
-                origin.save()
-                for param in origin.parameter_list:
-                    insight_params = request.session['insight_params']
-                    if param in insight_params:
-                        num_updated = QuerystringParameter.objects.filter(identifier=param, value=insight_params[param],
-                            origin=origin).update(number_of_registrations=F('number_of_registrations') + 1)
-                        if num_updated == 0:
-                            QuerystringParameter.objects.create(identifier=param, value=insight_params[param],
-                                origin=origin, number_of_registrations=1)
-            except IntegrityError:
-                pass
+            if origin.track_registrations:
+                try:
+                    Registration.objects.create(user=user, origin=origin)
+                    origin.number_of_registrations = F('number_of_registrations') + 1
+                    origin.save()
+                    for param in origin.parameter_list:
+                        insight_params = request.session['insight_params']
+                        if param in insight_params:
+                            num_updated = QuerystringParameter.objects.filter(identifier=param, value=insight_params[param],
+                                origin=origin).update(number_of_registrations=F('number_of_registrations') + 1)
+                            if num_updated == 0:
+                                QuerystringParameter.objects.create(identifier=param, value=insight_params[param],
+                                    origin=origin, number_of_registrations=1)
+                except IntegrityError:
+                    pass
         except (Origin.DoesNotExist, KeyError):
             pass
 
