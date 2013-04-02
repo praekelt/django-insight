@@ -1,6 +1,5 @@
 from django.contrib import admin
-from django import forms
-from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 
 from insight.models import Origin, OriginGroup, QuerystringParameter
 
@@ -9,8 +8,8 @@ class OriginAdmin(admin.ModelAdmin):
     list_display = ('title', 'description', 'origin_group', 'url', 'number_of_registrations')
 
     def url(self, origin):
-        url = origin.get_absolute_url()
-        return '<a href="%s">%s</a>' % (url, url)
+        url = "%s%s" % (Site.objects.get_current().domain, origin.get_absolute_url())
+        return '<a href="//%s">%s</a>' % (url, url)
     url.allow_tags = True
 
 
