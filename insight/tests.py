@@ -48,9 +48,7 @@ class InsightTestCase(TestCase):
         # test creation of querystring param objects
         self.client.cookies.clear()
         self.client.get(origin.get_absolute_url(), data={'pid': 123, 'oid': 444, 'kid': '00'})
-        user = User.objects.create_user(
-            'username1', 'user1@host.com', self.password
-        )
+        User.objects.create_user('username1', 'user1@host.com', self.password)
         self.client.login(username='username1', password=self.password)
         self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='pid',
             value=123).number_of_registrations==1)
@@ -62,9 +60,7 @@ class InsightTestCase(TestCase):
         # test updating of querystring param objects
         self.client.cookies.clear()
         self.client.get(origin.get_absolute_url(), data={'pid': 123, 'gid': 444})
-        user = User.objects.create_user(
-            'username2', 'user2@host.com', self.password
-        )
+        User.objects.create_user('username2', 'user2@host.com', self.password)
         self.client.login(username='username2', password=self.password)
         self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='pid',
             value='123').number_of_registrations==2)
