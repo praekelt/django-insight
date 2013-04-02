@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-insight',
-    version='0.0.1',
+    version='0.1',
     description='Records and displays registration origin stats.',
     long_description = open('README.rst', 'r').read() + open('AUTHORS.rst', 'r').read() + open('CHANGELOG.rst', 'r').read(),
     author='Praekelt Foundation',
@@ -14,7 +14,7 @@ setup(
     ],
     include_package_data=True,
     tests_require=[
-        'django-setuptest',
+        'django-setuptest>=0.1.2',
         'coverage',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",

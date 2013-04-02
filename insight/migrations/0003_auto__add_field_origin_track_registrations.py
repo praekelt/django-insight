@@ -8,64 +8,15 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'OriginGroup'
-        db.create_table('insight_origingroup', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('title', self.gf('django.db.models.fields.CharField')(max_length=50)),
-            ('description', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
-        ))
-        db.send_create_signal('insight', ['OriginGroup'])
-
-        # Adding model 'Origin'
-        db.create_table('insight_origin', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('title', self.gf('django.db.models.fields.CharField')(max_length=50)),
-            ('description', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
-            ('code', self.gf('django.db.models.fields.CharField')(db_index=True, unique=True, max_length=7, blank=True)),
-            ('querystring_parameters', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
-            ('number_of_registrations', self.gf('django.db.models.fields.IntegerField')(default=0)),
-            ('origin_group', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['insight.OriginGroup'], null=True, blank=True)),
-        ))
-        db.send_create_signal('insight', ['Origin'])
-
-        # Adding model 'QuerystringParameter'
-        db.create_table('insight_querystringparameter', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('identifier', self.gf('django.db.models.fields.CharField')(max_length=32, db_index=True)),
-            ('value', self.gf('django.db.models.fields.CharField')(max_length=50, db_index=True)),
-            ('origin', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['insight.Origin'])),
-            ('number_of_registrations', self.gf('django.db.models.fields.IntegerField')(default=0)),
-        ))
-        db.send_create_signal('insight', ['QuerystringParameter'])
-
-        # Adding unique constraint on 'QuerystringParameter', fields ['identifier', 'value', 'origin']
-        db.create_unique('insight_querystringparameter', ['identifier', 'value', 'origin_id'])
-
-        # Adding model 'Registration'
-        db.create_table('insight_registration', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'], unique=True)),
-            ('origin', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['insight.Origin'])),
-            ('created', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-        ))
-        db.send_create_signal('insight', ['Registration'])
+        # Adding field 'Origin.track_registrations'
+        db.add_column('insight_origin', 'track_registrations',
+                      self.gf('django.db.models.fields.BooleanField')(default=True),
+                      keep_default=False)
 
 
     def backwards(self, orm):
-        # Removing unique constraint on 'QuerystringParameter', fields ['identifier', 'value', 'origin']
-        db.delete_unique('insight_querystringparameter', ['identifier', 'value', 'origin_id'])
-
-        # Deleting model 'OriginGroup'
-        db.delete_table('insight_origingroup')
-
-        # Deleting model 'Origin'
-        db.delete_table('insight_origin')
-
-        # Deleting model 'QuerystringParameter'
-        db.delete_table('insight_querystringparameter')
-
-        # Deleting model 'Registration'
-        db.delete_table('insight_registration')
+        # Deleting field 'Origin.track_registrations'
+        db.delete_column('insight_origin', 'track_registrations')
 
 
     models = {
@@ -113,7 +64,9 @@ class Migration(SchemaMigration):
             'number_of_registrations': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
             'origin_group': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['insight.OriginGroup']", 'null': 'True', 'blank': 'True'}),
             'querystring_parameters': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'max_length': '50'})
+            'redirect_to': ('django.db.models.fields.URLField', [], {'max_length': '200', 'null': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
+            'track_registrations': ('django.db.models.fields.BooleanField', [], {'default': 'True'})
         },
         'insight.origingroup': {
             'Meta': {'object_name': 'OriginGroup'},
