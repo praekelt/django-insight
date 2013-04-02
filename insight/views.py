@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.http import HttpResponseRedirect
 
 from insight.models import Origin
+
 
 def set_origin_code(request, code):
     request.session['insight_code'] = code

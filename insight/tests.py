@@ -1,12 +1,7 @@
-import os.path
-
 from django.test import TestCase
 from django.test.client import Client
 from django.contrib.auth.models import User
-from django.core.files import File as DjangoFile
 from django.core.urlresolvers import reverse
-from django.conf import settings
-from django.contrib.sites.models import Site
 
 from insight.models import Origin, Registration, QuerystringParameter
 
@@ -45,9 +40,9 @@ class InsightTestCase(TestCase):
             'username1', 'user1@host.com', self.password
         )
         self.client.login(username='username1', password=self.password)
-        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='pid', \
+        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='pid',
             value=123).number_of_registrations==1)
-        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='oid', \
+        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='oid',
             value=444).number_of_registrations==1)
         self.assertFalse(QuerystringParameter.objects.filter(origin=origin, identifier='kid').exists())
         self.assertFalse(QuerystringParameter.objects.filter(origin=origin, identifier='gid').exists())
@@ -59,14 +54,14 @@ class InsightTestCase(TestCase):
             'username2', 'user2@host.com', self.password
         )
         self.client.login(username='username2', password=self.password)
-        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='pid', \
+        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='pid',
             value='123').number_of_registrations==2)
-        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='oid', \
+        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='oid',
             value='444').number_of_registrations==1)
         self.assertFalse(QuerystringParameter.objects.filter(origin=origin, identifier='kid').exists())
-        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='gid', \
+        self.assertTrue(QuerystringParameter.objects.get(origin=origin, identifier='gid',
             value=444).number_of_registrations==1)
-    
+
     def test_redirect(self):
         origin1 = self.create_origin()
         origin2 = self.create_origin()
