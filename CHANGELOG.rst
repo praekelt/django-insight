@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.2.1 (22-10-2013)
+------------------
+#. Replace deprecated `adminmedia` with `staticfiles` tag.
+#. Fix bugs in graph drawing.
+
 0.2 (22-10-2013)
 ----------------
 #. Support for custom user models in Django 1.5 and up.

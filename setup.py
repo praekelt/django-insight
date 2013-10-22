@@ -11,7 +11,7 @@ def getcmdclass():
 
 setup(
     name='django-insight',
-    version='0.2',
+    version='0.2.1',
     description='Records and displays registration origin stats.',
     long_description = open('README.rst', 'r').read() + open('AUTHORS.rst', 'r').read() + open('CHANGELOG.rst', 'r').read(),
     author='Praekelt Foundation',
