@@ -8,7 +8,8 @@ def view_stub(request):
     return HttpResponse()
 
 
-urlpatterns = patterns('',
+urlpatterns = patterns(
+    '',
     url(
         r'^$',
         view_stub,
