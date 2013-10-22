@@ -6,10 +6,10 @@
         window.addEventListener("load", function(){
             IGraphs.init(); // can be called multiple times on a page without effect
             var piechart = new IGraphs.PieChart("Origins", 400, 400);
-            piechart.updateData("result_list", 1, 4);
+            piechart.updateData("result_list", 1, 5);
             piechart.draw();
             var barchart = new IGraphs.BarChart("Registrations per origin", 400, 400);
-            barchart.updateData("result_list", 1, 4);
+            barchart.updateData("result_list", 1, 5);
             barchart.draw();
         }, false);
     </script>
