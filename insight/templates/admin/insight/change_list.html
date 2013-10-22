@@ -1,15 +1,15 @@
 {% extends "admin/change_list.html" %}
-{% load adminmedia %}
+{% load staticfiles %}
 
 {% block extrastyle %}
     {{ block.super }}
-    <link rel="stylesheet" type="text/css" href="{% admin_media_prefix %}css/splitscreen.css" />
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/splitscreen.css' %}" />
 {% endblock %}
 
 {% block extrahead %}
     {{ block.super }}
-    <script type="text/javascript" src="{% admin_media_prefix %}thirdparty/d3.v2.min.js"></script>
-    <script type="text/javascript" src="{% admin_media_prefix %}js/graphs.js"></script>
+    <script type="text/javascript" src="{% static 'admin/thirdparty/d3.v2.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'admin/js/graphs.js' %}"></script>
 {% endblock %}
 
 {% block content %}
