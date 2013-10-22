@@ -1,10 +1,14 @@
 from django.test import TestCase
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
+try:
+    from django.contrib.auth import get_user_model
+except ImportError:  # django < 1.5
+    from django.contrib.auth.models import User
+else:
+    User = get_user_model()
 
 from insight.models import (Origin, Registration,
                             QuerystringParameter)
-from insight.test.models import CustomUser
 
 
 def create_origin(title='test_origin'):
@@ -18,7 +22,7 @@ class RegistrationRecordingTestCase(object):
     def test_registration_is_recorded(self):
         origin = create_origin()
         self.client.get(origin.get_absolute_url())
-        user = self.user_model.objects.create_user(
+        user = User.objects.create_user(
             'username', 'user@host.com', 'password'
         )
         self.client.login(username='username', password='password')
@@ -26,7 +30,6 @@ class RegistrationRecordingTestCase(object):
 
 
 class AuthUserTestCase(RegistrationRecordingTestCase, TestCase):
-    user_model = User
 
     def test_registration_not_recorded(self):
         origin = create_origin()
@@ -119,7 +122,3 @@ class AuthUserTestCase(RegistrationRecordingTestCase, TestCase):
         self.assertEqual(origin, signal_dict['instance'])
         self.assertEqual(signal_dict['request'].path,
                          origin.get_absolute_url())
-
-
-class CustomUserTestCase(RegistrationRecordingTestCase, TestCase):
-    user_model = CustomUser

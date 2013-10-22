@@ -125,5 +125,5 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
 )
 
-# Uncomment this to run CustomUserTestCase
+# Uncomment this to test custom user model supprt
 # AUTH_USER_MODEL = 'test.CustomUser'
