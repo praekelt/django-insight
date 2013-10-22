@@ -111,10 +111,13 @@ class AuthUserTestCase(TestCase):
         origin2 = create_origin()
         origin2.redirect_to = reverse("stub")
         origin2.save()
-        self.assertRedirects(self.client.get(origin1.get_absolute_url()),
-                             '/')
-        self.assertRedirects(self.client.get(origin2.get_absolute_url()),
-                             reverse('stub'))
+        response = self.client.get(origin1.get_absolute_url())
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'].split('/', 3)[-1], '')
+        response = self.client.get(origin2.get_absolute_url())
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'].split('/', 3)[-1],
+                         reverse('stub').lstrip('/'))
 
     def test_origin_hit_signal(self):
         origin = create_origin()

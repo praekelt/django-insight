@@ -11,11 +11,6 @@ def view_stub(request):
 urlpatterns = patterns(
     '',
     url(
-        r'^$',
-        view_stub,
-        name='home'
-    ),
-    url(
         r'^stub/$',
         view_stub,
         name='stub'
