@@ -3,9 +3,14 @@ import uuid
 from django.core.urlresolvers import reverse
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
-from django.contrib.auth.models import User
 from django.db import models, IntegrityError
 from django.db.models import F
+try:
+    from django.contrib.auth import get_user_model
+except ImportError:  # django < 1.5
+    from django.contrib.auth.models import User
+else:
+    User = get_user_model()
 
 
 class OriginGroup(models.Model):

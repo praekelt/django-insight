@@ -1,5 +1,14 @@
 from setuptools import setup, find_packages
 
+
+def getcmdclass():
+    try:
+        from setuptest import test
+        return test
+    except ImportError:
+        return None
+
+
 setup(
     name='django-insight',
     version='0.1',
@@ -11,6 +20,8 @@ setup(
     url='http://github.com/praekelt/django-insight',
     packages = find_packages(),
     install_requires = [
+        'Django>=1.4',
+        'South',
     ],
     include_package_data=True,
     tests_require=[
@@ -18,6 +29,7 @@ setup(
         'coverage',
     ],
     test_suite="setuptest.setuptest.SetupTestSuite",
+    cmdclass={'test': getcmdclass()},
     classifiers=[
         "Programming Language :: Python",
         "License :: OSI Approved :: BSD License",

@@ -16,7 +16,7 @@ How to use
 Requirements
 ------------
 
-- Django 1.3 and above
+- Django 1.4 and above
 - The following Django modules:
     - `django.contrib.auth`
     - `django.contrib.contenttypes`
@@ -25,6 +25,3 @@ Requirements
     - `django.contrib.auth.middleware.AuthenticationMiddleware`
     - `django.contrib.sessions.middleware.SessionMiddleware`
 - South
-- django-generate_ (optional - used to generate test data)
-
-.. _django-generate: https://github.com/praekelt/django-generate
