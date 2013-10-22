@@ -1,4 +1,7 @@
+import unittest
+
 from django.test import TestCase
+from django.conf import settings
 from django.core.urlresolvers import reverse
 try:
     from django.contrib.auth import get_user_model
@@ -17,15 +20,31 @@ def create_origin(title='test_origin'):
     return origin
 
 
+class CannotCreateCustomUser(unittest.SkipTest):
+    pass
+
+
+def create_user(username, password):
+    try:
+        return User.objects.create_user(
+            username, 'user@host.com', password
+        )
+    except TypeError:
+        # We cannot run this test if we don't know
+        # how to create a user - too tricksy to
+        # solve right now
+        if settings.AUTH_USER_MODEL != 'auth.User':
+            raise CannotCreateCustomUser
+        raise
+
+
 class AuthUserTestCase(TestCase):
     urls = 'insight.test.urls'
 
     def test_registration_is_recorded(self):
         origin = create_origin()
         self.client.get(origin.get_absolute_url())
-        user = User.objects.create_user(
-            'username', 'user@host.com', 'password'
-        )
+        user = create_user('username', 'password')
         self.client.login(username='username', password='password')
         self.assertTrue(Registration.objects.filter(user=user).exists())
 
@@ -34,9 +53,7 @@ class AuthUserTestCase(TestCase):
         origin.track_registrations = False
         origin.save()
         self.client.get(origin.get_absolute_url())
-        user = User.objects.create_user(
-            'username', 'user@host.com', 'password'
-        )
+        user = create_user('username', 'password')
         self.client.login(username='username', password='password')
         self.assertFalse('insight_code' in self.client.session)
         self.assertFalse(Registration.objects.filter(user=user).exists())
@@ -50,7 +67,7 @@ class AuthUserTestCase(TestCase):
         self.client.cookies.clear()
         self.client.get(origin.get_absolute_url(),
                         data={'pid': 123, 'oid': 444, 'kid': '00'})
-        User.objects.create_user('username1', 'user1@host.com', 'password')
+        create_user('username1', 'password')
         self.client.login(username='username1', password='password')
         self.assertEqual(QuerystringParameter.objects.get(origin=origin,
                                                           identifier='pid',
@@ -71,7 +88,7 @@ class AuthUserTestCase(TestCase):
         self.client.cookies.clear()
         self.client.get(origin.get_absolute_url(),
                         data={'pid': 123, 'gid': 444})
-        User.objects.create_user('username2', 'user2@host.com', 'password')
+        create_user('username2', 'password')
         self.client.login(username='username2', password='password')
         self.assertEqual(QuerystringParameter.objects.get(origin=origin,
                                                           identifier='pid',
