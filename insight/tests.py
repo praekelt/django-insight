@@ -17,7 +17,8 @@ def create_origin(title='test_origin'):
     return origin
 
 
-class RegistrationRecordingTestCase(object):
+class AuthUserTestCase(TestCase):
+    urls = 'insight.test.urls'
 
     def test_registration_is_recorded(self):
         origin = create_origin()
@@ -27,9 +28,6 @@ class RegistrationRecordingTestCase(object):
         )
         self.client.login(username='username', password='password')
         self.assertTrue(Registration.objects.filter(user=user).exists())
-
-
-class AuthUserTestCase(RegistrationRecordingTestCase, TestCase):
 
     def test_registration_not_recorded(self):
         origin = create_origin()
