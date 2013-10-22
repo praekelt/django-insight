@@ -237,13 +237,14 @@ IGraphs.BarChart.prototype.draw = function() {
         .domain([0, max])
         .range([0, -0.66 * this.height]);
     // create measure lines and labels
+    var base_x_offset = (this.width - this.data.length * this.column_width) / 2.0;
     this.measure.attr("transform",
-        "translate(" + this.column_width + "," + (this.height - 60) + ")");
+        "translate(" + base_x_offset + "," + (this.height - 60) + ")");
     var ticks = Math.round(0.66 * this.height / (50 * 5)) * 5;
     ticks = y_inverse.ticks(ticks);
     this.measure.selectAll("line").data(ticks)
         .enter().append("line")
-        .attr("x2", this.width - 2 * this.column_width)
+        .attr("x2", this.column_width * this.data.length)
         .attr("y1", y_inverse)
         .attr("y2", y_inverse)
         .style("stroke", "#CCCCCC");
@@ -257,7 +258,7 @@ IGraphs.BarChart.prototype.draw = function() {
         .text(String);
     // create bars and labels
     this.bars.attr("transform", 
-        "translate(" + (this.width - this.column_width * this.data.length)/2.0 + ",0)");
+        "translate(" + base_x_offset + ", 0)");
     var bars = this.bars.selectAll("rect").data(this.data);
     bars.enter().append("svg:g")
         .attr("class", "bar")
