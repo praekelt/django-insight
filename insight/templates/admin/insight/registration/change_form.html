@@ -1,0 +1,23 @@
+{% extends "admin/change_form.html" %}
+
+{% block content_title %}<h1>Registration details</h1>{% endblock %}
+
+{% block content %}
+<div class="content-main">
+    <table width="100%">
+        <colgroup width="10%"></colgroup>
+        <tr class="form-row">
+            <td style="font-size:12px;">User: </td>
+            <td><a href="/admin/auth/user/{{ original.user.id }}">{{ original.user }}</a></td>
+        </tr>
+        <tr class="form-row">
+            <td style="font-size:12px;">Origin: </td>
+            <td><a href="/admin/insight/origin/{{ original.origin.id }}">{{ original.origin.title }}</a></td>
+        </tr>
+        <tr class="form-row">
+            <td style="font-size:12px;">Registered: </td>
+            <td>{{ original.created }}</td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

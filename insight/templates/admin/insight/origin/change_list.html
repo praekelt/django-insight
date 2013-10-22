@@ -1,0 +1,16 @@
+{% extends "admin/insight/change_list.html" %}
+
+{% block content %}
+    {{ block.super }}
+    <script type="text/javascript">
+        window.addEventListener("load", function(){
+            IGraphs.init(); // can be called multiple times on a page without effect
+            var piechart = new IGraphs.PieChart("Origins", 400, 400);
+            piechart.updateData("result_list", 1, 4);
+            piechart.draw();
+            var barchart = new IGraphs.BarChart("Registrations per origin", 400, 400);
+            barchart.updateData("result_list", 1, 4);
+            barchart.draw();
+        }, false);
+    </script>
+{% endblock %}

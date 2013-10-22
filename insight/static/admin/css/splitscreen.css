@@ -1,0 +1,39 @@
+#container {
+    width: 100%;
+}
+
+#content {
+    overflow: hidden;
+}
+
+#content-main {
+    float: left;
+    width: 50%;
+}
+
+#graphs {
+    overflow: hidden;
+}
+
+#graphs > div {
+    float: right;
+}
+
+.graph .title {
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.graph .label {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.graph .percentage, .graph .datetime {
+    font-size: 11px;
+}
+
+.graph .measure .value {
+    font-style: italic;
+}
