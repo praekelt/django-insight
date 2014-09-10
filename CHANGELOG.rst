@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.2.2 (10-09-2014)
+------------------
+#. Allow a hyphen as part of the tracking code.
+
 0.2.1 (22-10-2013)
 ------------------
 #. Replace deprecated `adminmedia` with `staticfiles` tag.
